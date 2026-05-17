@@ -60,19 +60,21 @@ fun HomeScreen(
             Text("历史记录", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp))
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(tasks, key = { it.id }) { task ->
-                    Card(modifier = Modifier.fillMaxWidth().clickable { if (task.status == "completed") onNavigateToPlayer(task.id) },
+                    Card(modifier = Modifier.fillMaxWidth().clickable {
+                            if (task.status == "completed" || task.status == "processing") onNavigateToPlayer(task.id)
+                        },
                         colors = CardDefaults.cardColors(containerColor = DarkCard), shape = RoundedCornerShape(8.dp)) {
                         Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.PlayArrow, null, tint = if (task.status == "completed") AccentBlue else TextMuted, modifier = Modifier.size(24.dp))
+                            Icon(Icons.Default.PlayArrow, null, tint = if (task.status != "failed") AccentBlue else TextMuted, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(task.filename, color = TextPrimary, fontSize = 15.sp, maxLines = 1)
                                 Text(when (task.status) {
                                     "completed" -> "${task.sentences.size} 句"
-                                    "processing" -> "处理中..."
+                                    "processing" -> "⏳ 处理中...（可先看视频）"
                                     "failed" -> "失败: ${task.error ?: ""}"
                                     else -> task.status
-                                }, color = if (task.status == "completed") AccentBlue else TextMuted, fontSize = 13.sp)
+                                }, color = if (task.status != "failed") AccentBlue else TextMuted, fontSize = 13.sp)
                             }
                             IconButton(onClick = { viewModel.deleteTask(task.id) }) {
                                 Icon(Icons.Default.Delete, "删除", tint = TextMuted)
