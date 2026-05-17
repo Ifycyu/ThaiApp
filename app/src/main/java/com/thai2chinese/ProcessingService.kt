@@ -9,7 +9,13 @@ import com.thai2chinese.api.ThaiWordApi
 import com.thai2chinese.api.ThaiWordHeaders
 import com.thai2chinese.api.WhisperApi
 import com.thai2chinese.audio.AudioExtractor
-import com.thai2chinese.data.*
+import com.thai2chinese.data.AppConfig
+import com.thai2chinese.data.Sentence
+import com.thai2chinese.data.Syllable
+import com.thai2chinese.data.TaskInfo
+import com.thai2chinese.data.TaskStore
+import com.thai2chinese.data.ToneInfo
+import com.thai2chinese.data.Word
 import kotlinx.coroutines.*
 import java.util.UUID
 

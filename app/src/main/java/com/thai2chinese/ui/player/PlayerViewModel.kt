@@ -8,7 +8,14 @@ import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import com.thai2chinese.api.ThaiWordApi
 import com.thai2chinese.api.ThaiWordHeaders
-import com.thai2chinese.data.*
+import com.thai2chinese.data.AppConfig
+import com.thai2chinese.data.Sentence
+import com.thai2chinese.data.Syllable
+import com.thai2chinese.data.TaskInfo
+import com.thai2chinese.data.TaskStore
+import com.thai2chinese.data.ToneInfo
+import com.thai2chinese.data.Word
+import com.thai2chinese.data.WordDetail
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
