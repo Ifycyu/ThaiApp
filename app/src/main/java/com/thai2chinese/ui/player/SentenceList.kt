@@ -65,6 +65,7 @@ fun SentenceItem(sentence: Sentence, isActive: Boolean, activeWord: Int,
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun SentenceMenuSheet(
     sentence: Sentence?,
     onDismiss: () -> Unit,
