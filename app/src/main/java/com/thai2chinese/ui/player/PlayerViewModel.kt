@@ -17,6 +17,7 @@ import com.thai2chinese.data.TaskStore
 import com.thai2chinese.data.ToneInfo
 import com.thai2chinese.data.Word
 import com.thai2chinese.data.WordDetail
+import kotlinx.coroutines.async
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
