@@ -84,36 +84,37 @@ class ProcessingService : Service() {
             notifyListeners()
 
             // 并发处理所有句子（分词 + 翻译）
-            val enrichedSentences = sentences.mapIndexed { idx, sentence ->
-                async(Dispatchers.IO) {
-                    updateProgress("分词分析 (${idx + 1}/${sentences.size})...", 0.5f + 0.4f * (idx.toFloat() / sentences.size))
+            val enrichedSentences = coroutineScope {
+                sentences.mapIndexed { idx, sentence ->
+                    async(Dispatchers.IO) {
+                        updateProgress("分词分析 (${idx + 1}/${sentences.size})...", 0.5f + 0.4f * (idx.toFloat() / sentences.size))
 
-                    // 分词和翻译并发
-                    val enrichDeferred = async(Dispatchers.IO) {
-                        try {
-                            val result = ThaiWordApi.analyze(sentence.text, twUrl, headers)
-                            if (result.words.isNotEmpty()) {
-                                val duration = sentence.end - sentence.start; val wordDuration = if (result.words.size > 0) duration / result.words.size else duration
-                                val enrichedWords = result.words.mapIndexed { i, aw -> Word(text = aw.word, roman = aw.ipa, start = sentence.start + i * wordDuration, end = sentence.start + (i + 1) * wordDuration,
-                                    ipa = aw.ipa, meaning = aw.chinese, word_class = aw.word_class,
-                                    syllables = aw.syllables.map { s -> Syllable(syllable = s.syllable, text = s.text, ipa = s.ipa, consonant = s.consonant, consonant_class = s.consonant_class, vowel = s.vowel, vowel_length = s.vowel_length, tone_mark = s.tone_mark, final_consonant = s.final_consonant, final_type = s.final_type, tone = s.tone?.let { ToneInfo(it.tone, it.tone_cn, it.tone_number, it.explanation) }, explanation = s.explanation, pronunciation_tip = s.pronunciation_tip) }) }
-                                sentence.copy(words = enrichedWords)
-                            } else sentence
-                        } catch (_: Exception) { sentence }
-                    }
-
-                    val translateDeferred = if (sentence.translation.isBlank()) {
-                        async(Dispatchers.IO) {
-                            try { ThaiWordApi.translate(sentence.text, twUrl, headers).translated }
-                            catch (_: Exception) { "" }
+                        val enrichDeferred = async(Dispatchers.IO) {
+                            try {
+                                val result = ThaiWordApi.analyze(sentence.text, twUrl, headers)
+                                if (result.words.isNotEmpty()) {
+                                    val duration = sentence.end - sentence.start; val wordDuration = if (result.words.size > 0) duration / result.words.size else duration
+                                    val enrichedWords = result.words.mapIndexed { i, aw -> Word(text = aw.word, roman = aw.ipa, start = sentence.start + i * wordDuration, end = sentence.start + (i + 1) * wordDuration,
+                                        ipa = aw.ipa, meaning = aw.chinese, word_class = aw.word_class,
+                                        syllables = aw.syllables.map { s -> Syllable(syllable = s.syllable, text = s.text, ipa = s.ipa, consonant = s.consonant, consonant_class = s.consonant_class, vowel = s.vowel, vowel_length = s.vowel_length, tone_mark = s.tone_mark, final_consonant = s.final_consonant, final_type = s.final_type, tone = s.tone?.let { ToneInfo(it.tone, it.tone_cn, it.tone_number, it.explanation) }, explanation = s.explanation, pronunciation_tip = s.pronunciation_tip) }) }
+                                    sentence.copy(words = enrichedWords)
+                                } else sentence
+                            } catch (_: Exception) { sentence }
                         }
-                    } else null
 
-                    val enriched = enrichDeferred.await()
-                    val translation = translateDeferred?.await() ?: sentence.translation
-                    if (translation.isNotBlank()) enriched.copy(translation = translation) else enriched
-                }
-            }.awaitAll()
+                        val translateDeferred = if (sentence.translation.isBlank()) {
+                            async(Dispatchers.IO) {
+                                try { ThaiWordApi.translate(sentence.text, twUrl, headers).translated }
+                                catch (_: Exception) { "" }
+                            }
+                        } else null
+
+                        val enriched = enrichDeferred.await()
+                        val translation = translateDeferred?.await() ?: sentence.translation
+                        if (translation.isNotBlank()) enriched.copy(translation = translation) else enriched
+                    }
+                }.awaitAll()
+            }
 
             val task = TaskInfo(id = taskId, filename = filename, status = "completed", sentences = enrichedSentences, videoUri = videoUri)
             store.put(task)

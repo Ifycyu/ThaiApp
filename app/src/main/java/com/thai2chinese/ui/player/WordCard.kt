@@ -90,7 +90,8 @@ fun WordCardContent(detail: WordDetail) {
 fun DictApiCardContent(result: DictApiResult) {
     val clipboardManager = LocalClipboardManager.current
 
-    HorizontalDivider(color = DarkSurface, modifier = Modifier.padding(horizontal = 20.dp))
+    @Suppress("DEPRECATION")
+    Divider(color = DarkSurface, modifier = Modifier.padding(horizontal = 20.dp))
 
     Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
