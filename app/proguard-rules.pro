@@ -1,0 +1,4 @@
+-keepattributes Signature
+-keepattributes *Annotation*
+-keep class com.thai2chinese.api.** { *; }
+-keep class com.thai2chinese.data.** { *; }
