@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
+import com.thai2chinese.api.DictApiResult
 import com.thai2chinese.api.ThaiWordApi
 import com.thai2chinese.api.ThaiWordHeaders
 import com.thai2chinese.data.AppConfig
@@ -41,6 +42,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val selectedWord: StateFlow<WordDetail?> = _selectedWord
     private val _isLoadingWord = MutableStateFlow(false)
     val isLoadingWord: StateFlow<Boolean> = _isLoadingWord
+    private val _selectedDictResult = MutableStateFlow<DictApiResult?>(null)
+    val selectedDictResult: StateFlow<DictApiResult?> = _selectedDictResult
 
     private var syncJob: Job? = null
     private val enrichingSentences = mutableSetOf<Int>()
@@ -140,9 +143,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun onWordClick(word: String, context: String) {
-        _isLoadingWord.value = true; _selectedWord.value = null
+        _isLoadingWord.value = true; _selectedWord.value = null; _selectedDictResult.value = null
         val twUrl = config.thaiwordUrl; val headers = twHeaders()
+        val useExternalDict = config.enableExternalDict && config.dictApiUrl.isNotBlank()
+
         viewModelScope.launch {
+            // ThaiWord 查询
             try {
                 val result = withContext(Dispatchers.IO) { ThaiWordApi.dict(word, twUrl, headers) }
                 _selectedWord.value = WordDetail(word = result.word, ipa = result.ipa, meaning = result.chinese, word_class = result.word_class,
@@ -150,10 +156,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     examples = result.examples)
             } catch (_: Exception) { _selectedWord.value = WordDetail(word = word, meaning = "查询失败") }
             finally { _isLoadingWord.value = false }
+
+            // 外部词典查询
+            if (useExternalDict) {
+                val dictResult = withContext(Dispatchers.IO) { ThaiWordApi.dictApiLookup(word, config.dictApiUrl) }
+                _selectedDictResult.value = dictResult
+            }
         }
     }
 
-    fun dismissWordCard() { _selectedWord.value = null }
+    fun dismissWordCard() { _selectedWord.value = null; _selectedDictResult.value = null }
     fun seekTo(time: Double) { player.seekTo((time * 1000).toLong()) }
 
     override fun onCleared() { super.onCleared(); syncJob?.cancel(); player.release() }

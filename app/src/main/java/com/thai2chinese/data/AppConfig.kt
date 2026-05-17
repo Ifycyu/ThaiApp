@@ -21,6 +21,10 @@ class AppConfig(context: Context) {
         get() = prefs.getString("dict_api_url", "") ?: ""
         set(value) = prefs.edit().putString("dict_api_url", value).apply()
 
+    var enableExternalDict: Boolean
+        get() = prefs.getBoolean("enable_external_dict", false)
+        set(value) = prefs.edit().putBoolean("enable_external_dict", value).apply()
+
     var translateEndpoint: String
         get() = prefs.getString("translate_endpoint", "") ?: ""
         set(value) = prefs.edit().putString("translate_endpoint", value).apply()

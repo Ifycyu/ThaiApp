@@ -56,4 +56,35 @@ object ThaiWordApi {
     }
 
     fun ttsUrl(word: String, baseUrl: String): String = "${baseUrl.trimEnd('/')}/api/tts/$word"
+
+    fun dictApiLookup(word: String, dictApiUrl: String): DictApiResult? {
+        if (dictApiUrl.isBlank()) return null
+        try {
+            val body = okhttp3.FormBody.Builder().add("str", word).build()
+            val request = Request.Builder().url(dictApiUrl).post(body).build()
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: return null
+            if (!response.isSuccessful) return null
+            val json = gson.fromJson(responseBody, Map::class.java) as? Map<*, *> ?: return null
+            val entry = json["1"] as? Map<*, *> ?: return null
+            val list = entry["list"] as? List<*> ?: return null
+            if (list.isEmpty()) return null
+            val item = list[0] as? Map<*, *> ?: return null
+            return DictApiResult(
+                explain = item["explain"]?.toString() ?: "",
+                pronu = item["pronu"]?.toString() ?: "",
+                fyfx = item["fyfx"]?.toString() ?: "",
+                thesaurus = item["thesaurus"]?.toString() ?: "",
+                examp = (item["examp"] as? List<*>)?.mapNotNull { it?.toString() } ?: emptyList()
+            )
+        } catch (_: Exception) { return null }
+    }
 }
+
+data class DictApiResult(
+    val explain: String = "",
+    val pronu: String = "",
+    val fyfx: String = "",
+    val thesaurus: String = "",
+    val examp: List<String> = emptyList()
+)

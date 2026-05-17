@@ -27,6 +27,7 @@ fun SettingsScreen(onBack: () -> Unit, config: AppConfig) {
     var whisperUrl by remember { mutableStateOf(config.whisperBaseUrl) }
     var thaiwordUrl by remember { mutableStateOf(config.thaiwordUrl) }
     var dictApiUrl by remember { mutableStateOf(config.dictApiUrl) }
+    var enableExternalDict by remember { mutableStateOf(config.enableExternalDict) }
     var translateEndpoint by remember { mutableStateOf(config.translateEndpoint) }
     var translateToken by remember { mutableStateOf(config.translateToken) }
     var translateModel by remember { mutableStateOf(config.translateModel) }
@@ -58,8 +59,15 @@ fun SettingsScreen(onBack: () -> Unit, config: AppConfig) {
 
         Spacer(modifier = Modifier.height(20.dp))
         SectionTitle("词典 API（X-Dict-API）")
-        OutlinedTextField(value = dictApiUrl, onValueChange = { dictApiUrl = it; saved = false }, modifier = Modifier.fillMaxWidth(),
-            label = { Text("词典 API 地址", color = TextSecondary) }, colors = fieldColors(), singleLine = true)
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("点击查词时同时查询外部词典", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            Switch(checked = enableExternalDict, onCheckedChange = { enableExternalDict = it; saved = false })
+        }
+        if (enableExternalDict) {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(value = dictApiUrl, onValueChange = { dictApiUrl = it; saved = false }, modifier = Modifier.fillMaxWidth(),
+                label = { Text("词典 API 地址", color = TextSecondary) }, colors = fieldColors(), singleLine = true)
+        }
 
         Spacer(modifier = Modifier.height(20.dp))
         SectionTitle("翻译 API")
@@ -78,7 +86,8 @@ fun SettingsScreen(onBack: () -> Unit, config: AppConfig) {
         Spacer(modifier = Modifier.height(24.dp))
         Button(onClick = {
             config.whisperApiKey = whisperKey.trim(); config.whisperBaseUrl = whisperUrl.trim(); config.thaiwordUrl = thaiwordUrl.trim()
-            config.dictApiUrl = dictApiUrl.trim(); config.translateEndpoint = translateEndpoint.trim()
+            config.dictApiUrl = dictApiUrl.trim()
+            config.enableExternalDict = enableExternalDict; config.translateEndpoint = translateEndpoint.trim()
             config.translateToken = translateToken.trim(); config.translateModel = translateModel.trim(); saved = true
         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = AccentBlue), shape = RoundedCornerShape(8.dp)) {
             Text("保存", fontSize = 16.sp, modifier = Modifier.padding(vertical = 4.dp))
@@ -92,7 +101,7 @@ fun SettingsScreen(onBack: () -> Unit, config: AppConfig) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("• Whisper：语音识别，密钥和地址必填", color = TextSecondary, fontSize = 13.sp)
                 Text("• ThaiWord：分词、声调、TTS", color = TextSecondary, fontSize = 13.sp)
-                Text("• 词典 API：外部词典（可选）", color = TextSecondary, fontSize = 13.sp)
+                Text("• 词典 API：开启后点击单词会同时查外部词典", color = TextSecondary, fontSize = 13.sp)
                 Text("• 翻译 API：泰语转中文 LLM", color = TextSecondary, fontSize = 13.sp)
             }
         }

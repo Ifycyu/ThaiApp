@@ -17,6 +17,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.thai2chinese.api.DictApiResult
 import com.thai2chinese.audio.TtsPlayer
 import com.thai2chinese.data.AppConfig
 import com.thai2chinese.data.Syllable
@@ -26,7 +27,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WordCardSheet(wordDetail: WordDetail?, isLoading: Boolean, onDismiss: () -> Unit) {
+fun WordCardSheet(wordDetail: WordDetail?, dictResult: DictApiResult?, isLoading: Boolean, onDismiss: () -> Unit) {
     if (wordDetail != null || isLoading) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = DarkCard, contentColor = TextPrimary, dragHandle = null) {
@@ -34,7 +35,14 @@ fun WordCardSheet(wordDetail: WordDetail?, isLoading: Boolean, onDismiss: () -> 
                 Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = AccentBlue)
                 }
-            } else if (wordDetail != null) { WordCardContent(wordDetail) }
+            } else if (wordDetail != null) {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    WordCardContent(wordDetail)
+                    if (dictResult != null) {
+                        DictApiCardContent(dictResult)
+                    }
+                }
+            }
         }
     }
 }
@@ -46,7 +54,7 @@ fun WordCardContent(detail: WordDetail) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val config = remember { AppConfig.getInstance(context) }
 
-    Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
         Text(detail.word, color = AccentBlue, fontSize = 32.sp, fontWeight = FontWeight.Bold)
         if (detail.ipa.isNotBlank()) { Text("/${detail.ipa}/", color = TextSecondary, fontSize = 16.sp, modifier = Modifier.padding(top = 4.dp)) }
         if (detail.word_class.isNotBlank()) {
@@ -74,7 +82,48 @@ fun WordCardContent(detail: WordDetail) {
                 Icon(Icons.Default.ContentCopy, null, modifier = Modifier.size(16.dp)); Spacer(modifier = Modifier.width(4.dp)); Text("复制")
             }
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+@Composable
+fun DictApiCardContent(result: DictApiResult) {
+    val clipboardManager = LocalClipboardManager.current
+
+    HorizontalDivider(color = DarkSurface, modifier = Modifier.padding(horizontal = 20.dp))
+
+    Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("外部词典", color = AccentPurple, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.weight(1f))
+            IconButton(onClick = {
+                val text = buildString {
+                    if (result.explain.isNotBlank()) append(result.explain)
+                    if (result.pronu.isNotBlank()) append("\n发音: ${result.pronu}")
+                }
+                clipboardManager.setText(AnnotatedString(text))
+            }) {
+                Icon(Icons.Default.ContentCopy, "复制", tint = TextMuted, modifier = Modifier.size(16.dp))
+            }
+        }
+
+        if (result.explain.isNotBlank()) {
+            Text(result.explain, color = TextPrimary, fontSize = 16.sp, modifier = Modifier.padding(bottom = 8.dp))
+        }
+        if (result.pronu.isNotBlank()) {
+            Text("发音: ${result.pronu}", color = TextSecondary, fontSize = 14.sp)
+        }
+        if (result.fyfx.isNotBlank()) {
+            Text("翻译: ${result.fyfx}", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp))
+        }
+        if (result.thesaurus.isNotBlank()) {
+            Text("同义词: ${result.thesaurus}", color = TextMuted, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
+        }
+        if (result.examp.isNotEmpty()) {
+            Text("例句", color = TextMuted, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+            result.examp.take(3).forEach { Text("• $it", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(vertical = 2.dp)) }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
     }
 }
 

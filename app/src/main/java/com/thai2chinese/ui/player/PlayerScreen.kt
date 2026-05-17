@@ -25,13 +25,14 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     val activeSentence by viewModel.activeSentence.collectAsState()
     val activeWord by viewModel.activeWord.collectAsState()
     val selectedWord by viewModel.selectedWord.collectAsState()
+    val selectedDictResult by viewModel.selectedDictResult.collectAsState()
     val isLoadingWord by viewModel.isLoadingWord.collectAsState()
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     LaunchedEffect(taskId) { viewModel.loadTask(taskId) }
 
-    WordCardSheet(wordDetail = selectedWord, isLoading = isLoadingWord, onDismiss = { viewModel.dismissWordCard() })
+    WordCardSheet(wordDetail = selectedWord, dictResult = selectedDictResult, isLoading = isLoadingWord, onDismiss = { viewModel.dismissWordCard() })
 
     if (task == null) {
         Box(modifier = Modifier.fillMaxSize().background(DarkBg), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = AccentBlue) }
