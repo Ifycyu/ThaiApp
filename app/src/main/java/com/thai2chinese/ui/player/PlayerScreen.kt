@@ -9,8 +9,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,12 +29,38 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     val selectedWord by viewModel.selectedWord.collectAsState()
     val selectedDictResult by viewModel.selectedDictResult.collectAsState()
     val isLoadingWord by viewModel.isLoadingWord.collectAsState()
+    val menuSentence by viewModel.menuSentence.collectAsState()
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val clipboardManager = LocalClipboardManager.current
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editSentence by remember { mutableStateOf<com.thai2chinese.data.Sentence?>(null) }
 
     LaunchedEffect(taskId) { viewModel.loadTask(taskId) }
 
+    // 词卡
     WordCardSheet(wordDetail = selectedWord, dictResult = selectedDictResult, isLoading = isLoadingWord, onDismiss = { viewModel.dismissWordCard() })
+
+    // 长按菜单
+    SentenceMenuSheet(sentence = menuSentence, onDismiss = { viewModel.dismissSentenceMenu() },
+        onCopy = {
+            menuSentence?.let { clipboardManager.setText(AnnotatedString(it.text)); viewModel.dismissSentenceMenu() }
+        },
+        onCopyBilingual = {
+            menuSentence?.let {
+                val bilingual = "${it.text}\n${it.translation}"
+                clipboardManager.setText(AnnotatedString(bilingual))
+            }
+            viewModel.dismissSentenceMenu()
+        },
+        onRetranslate = { viewModel.retranslateSentence() },
+        onEdit = { editSentence = menuSentence; showEditDialog = true; viewModel.dismissSentenceMenu() })
+
+    // 编辑对话框
+    if (showEditDialog && editSentence != null) {
+        EditSentenceDialog(sentence = editSentence, onDismiss = { showEditDialog = false },
+            onSave = { text, translation -> viewModel.editSentence(text, translation); showEditDialog = false })
+    }
 
     if (task == null) {
         Box(modifier = Modifier.fillMaxSize().background(DarkBg), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = AccentBlue) }
@@ -46,7 +74,10 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) { VideoPlayerView(viewModel.player, Modifier.fillMaxSize()) }
             Column(modifier = Modifier.weight(1f).fillMaxHeight().background(DarkSurface)) {
                 SentenceList(currentTask.sentences, activeSentence, activeWord,
-                    onWordClick = { w, c -> viewModel.onWordClick(w, c) }, onSentenceClick = { viewModel.seekTo(it) }, modifier = Modifier.weight(1f))
+                    onWordClick = { w, c -> viewModel.onWordClick(w, c) },
+                    onSentenceClick = { viewModel.seekTo(it) },
+                    onSentenceLongClick = { idx, sent -> viewModel.showSentenceMenu(idx, sent) },
+                    modifier = Modifier.weight(1f))
             }
         }
     } else {
@@ -57,7 +88,10 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
             }
             Box(modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)) { VideoPlayerView(viewModel.player, Modifier.fillMaxSize()) }
             SentenceList(currentTask.sentences, activeSentence, activeWord,
-                onWordClick = { w, c -> viewModel.onWordClick(w, c) }, onSentenceClick = { viewModel.seekTo(it) }, modifier = Modifier.weight(1f))
+                onWordClick = { w, c -> viewModel.onWordClick(w, c) },
+                onSentenceClick = { viewModel.seekTo(it) },
+                onSentenceLongClick = { idx, sent -> viewModel.showSentenceMenu(idx, sent) },
+                modifier = Modifier.weight(1f))
         }
     }
 }

@@ -179,5 +179,44 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun dismissWordCard() { _selectedWord.value = null; _selectedDictResult.value = null }
     fun seekTo(time: Double) { player.seekTo((time * 1000).toLong()) }
 
+    // 长按句子菜单
+    private val _menuSentence = MutableStateFlow<Sentence?>(null)
+    val menuSentence: StateFlow<Sentence?> = _menuSentence
+    private var menuSentenceIndex = -1
+
+    fun showSentenceMenu(index: Int, sentence: Sentence) {
+        menuSentenceIndex = index; _menuSentence.value = sentence
+    }
+    fun dismissSentenceMenu() { _menuSentence.value = null }
+
+    fun retranslateSentence() {
+        val idx = menuSentenceIndex; val sentence = _menuSentence.value ?: return
+        if (idx < 0) return
+        _menuSentence.value = null
+        val twUrl = config.thaiwordUrl; val headers = twHeaders()
+
+        viewModelScope.launch {
+            try {
+                val translated = withContext(Dispatchers.IO) { ThaiWordApi.translate(sentence.text, twUrl, headers).translated }
+                val currentTask = _task.value ?: return@launch
+                val updated = currentTask.sentences.toMutableList()
+                updated[idx] = sentence.copy(translation = translated)
+                val newTask = currentTask.copy(sentences = updated)
+                _task.value = newTask; store.put(newTask)
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun editSentence(newText: String, newTranslation: String) {
+        val idx = menuSentenceIndex; val sentence = _menuSentence.value ?: return
+        if (idx < 0) return
+        _menuSentence.value = null
+        val currentTask = _task.value ?: return
+        val updated = currentTask.sentences.toMutableList()
+        updated[idx] = sentence.copy(text = newText, translation = newTranslation)
+        val newTask = currentTask.copy(sentences = updated)
+        _task.value = newTask; store.put(newTask)
+    }
+
     override fun onCleared() { super.onCleared(); syncJob?.cancel(); player.release() }
 }

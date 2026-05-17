@@ -17,9 +17,17 @@ import com.thai2chinese.data.TaskStore
 import com.thai2chinese.data.ToneInfo
 import com.thai2chinese.data.Word
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import java.util.UUID
+
+private suspend fun <T> retry(times: Int, block: suspend () -> T): T? {
+    repeat(times) {
+        try { return block() } catch (_: Exception) { kotlinx.coroutines.delay(1000L * (it + 1)) }
+    }
+    return try { block() } catch (_: Exception) { null }
+}
 
 class ProcessingService : Service() {
     private val scope = CoroutineScope(Dispatchers.Default + Job())
@@ -83,14 +91,16 @@ class ProcessingService : Service() {
             resultTaskId = taskId
             notifyListeners()
 
-            // 并发处理所有句子（分词 + 翻译）
+            // 并发处理所有句子（限制并发数为 3，失败重试 2 次）
+            val semaphore = kotlinx.coroutines.sync.Semaphore(3)
             val enrichedSentences = coroutineScope {
                 sentences.mapIndexed { idx, sentence ->
                     async(Dispatchers.IO) {
-                        updateProgress("分词分析 (${idx + 1}/${sentences.size})...", 0.5f + 0.4f * (idx.toFloat() / sentences.size))
+                        semaphore.acquire()
+                        try {
+                            updateProgress("分词分析 (${idx + 1}/${sentences.size})...", 0.5f + 0.4f * (idx.toFloat() / sentences.size))
 
-                        val enrichDeferred = async(Dispatchers.IO) {
-                            try {
+                            val enriched = retry(2) {
                                 val result = ThaiWordApi.analyze(sentence.text, twUrl, headers)
                                 if (result.words.isNotEmpty()) {
                                     val duration = sentence.end - sentence.start; val wordDuration = if (result.words.size > 0) duration / result.words.size else duration
@@ -99,19 +109,16 @@ class ProcessingService : Service() {
                                         syllables = aw.syllables.map { s -> Syllable(syllable = s.syllable, text = s.text, ipa = s.ipa, consonant = s.consonant, consonant_class = s.consonant_class, vowel = s.vowel, vowel_length = s.vowel_length, tone_mark = s.tone_mark, final_consonant = s.final_consonant, final_type = s.final_type, tone = s.tone?.let { ToneInfo(it.tone, it.tone_cn, it.tone_number, it.explanation) }, explanation = s.explanation, pronunciation_tip = s.pronunciation_tip) }) }
                                     sentence.copy(words = enrichedWords)
                                 } else sentence
-                            } catch (_: Exception) { sentence }
+                            } ?: sentence
+
+                            val translation = if (enriched.translation.isBlank()) {
+                                retry(2) { ThaiWordApi.translate(sentence.text, twUrl, headers).translated } ?: ""
+                            } else enriched.translation
+
+                            if (translation.isNotBlank()) enriched.copy(translation = translation) else enriched
+                        } finally {
+                            semaphore.release()
                         }
-
-                        val translateDeferred = if (sentence.translation.isBlank()) {
-                            async(Dispatchers.IO) {
-                                try { ThaiWordApi.translate(sentence.text, twUrl, headers).translated }
-                                catch (_: Exception) { "" }
-                            }
-                        } else null
-
-                        val enriched = enrichDeferred.await()
-                        val translation = translateDeferred?.await() ?: sentence.translation
-                        if (translation.isNotBlank()) enriched.copy(translation = translation) else enriched
                     }
                 }.awaitAll()
             }
