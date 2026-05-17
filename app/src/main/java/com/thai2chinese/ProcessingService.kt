@@ -90,7 +90,7 @@ class ProcessingService : Service() {
                             val duration = sentence.end - sentence.start; val wordDuration = if (result.words.size > 0) duration / result.words.size else duration
                             result.words.mapIndexed { i, aw -> Word(text = aw.word, roman = aw.ipa, start = sentence.start + i * wordDuration, end = sentence.start + (i + 1) * wordDuration,
                                 ipa = aw.ipa, meaning = aw.chinese, word_class = aw.word_class,
-                                syllables = aw.syllables.map { s -> Syllable(s.syllable, s.ipa, s.tone?.let { ToneInfo(it.tone, it.tone_cn, it.tone_number) }, s.explanation, s.pronunciation_tip) }) }
+                                syllables = aw.syllables.map { s -> Syllable(syllable = s.syllable, text = s.text, ipa = s.ipa, consonant = s.consonant, consonant_class = s.consonant_class, vowel = s.vowel, vowel_length = s.vowel_length, tone_mark = s.tone_mark, final_consonant = s.final_consonant, final_type = s.final_type, tone = s.tone?.let { ToneInfo(it.tone, it.tone_cn, it.tone_number, it.explanation) }, explanation = s.explanation, pronunciation_tip = s.pronunciation_tip) }) }
                         } else sentence.words
                         sentence.copy(words = enrichedWords)
                     }

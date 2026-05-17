@@ -20,8 +20,16 @@ data class Word(
 )
 
 data class Syllable(
-    val syllable: String,
+    val syllable: String = "",
+    val text: String = "",
     val ipa: String = "",
+    val consonant: String = "",
+    val consonant_class: String = "",
+    val vowel: String = "",
+    val vowel_length: String = "",
+    val tone_mark: String? = null,
+    val final_consonant: String? = null,
+    val final_type: String = "",
     val tone: ToneInfo? = null,
     val explanation: String = "",
     val pronunciation_tip: String = ""
@@ -30,7 +38,8 @@ data class Syllable(
 data class ToneInfo(
     val tone: String = "",
     val tone_cn: String = "",
-    val tone_number: Int = 0
+    val tone_number: Int = 0,
+    val explanation: String = ""
 )
 
 data class WordDetail(

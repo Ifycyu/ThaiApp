@@ -126,7 +126,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     result.words.mapIndexed { i, aw ->
                         Word(text = aw.word, roman = aw.ipa, start = sentence.start + i * wordDuration, end = sentence.start + (i + 1) * wordDuration,
                             ipa = aw.ipa, meaning = aw.chinese, word_class = aw.word_class,
-                            syllables = aw.syllables.map { s -> Syllable(s.syllable, s.ipa, s.tone?.let { ToneInfo(it.tone, it.tone_cn, it.tone_number) }, s.explanation, s.pronunciation_tip) })
+                            syllables = aw.syllables.map { s -> Syllable(syllable = s.syllable, text = s.text, ipa = s.ipa, consonant = s.consonant, consonant_class = s.consonant_class, vowel = s.vowel, vowel_length = s.vowel_length, tone_mark = s.tone_mark, final_consonant = s.final_consonant, final_type = s.final_type, tone = s.tone?.let { ToneInfo(it.tone, it.tone_cn, it.tone_number, it.explanation) }, explanation = s.explanation, pronunciation_tip = s.pronunciation_tip) })
                     }
                 } else sentence.words
 
@@ -143,24 +143,34 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun onWordClick(word: String, context: String) {
+        player.pause()
         _isLoadingWord.value = true; _selectedWord.value = null; _selectedDictResult.value = null
         val twUrl = config.thaiwordUrl; val headers = twHeaders()
         val useExternalDict = config.enableExternalDict && config.dictApiUrl.isNotBlank()
 
         viewModelScope.launch {
-            // ThaiWord 查询
-            try {
-                val result = withContext(Dispatchers.IO) { ThaiWordApi.dict(word, twUrl, headers) }
-                _selectedWord.value = WordDetail(word = result.word, ipa = result.ipa, meaning = result.chinese, word_class = result.word_class,
-                    syllables = result.syllables.map { s -> Syllable(s.syllable, s.ipa, s.tone?.let { ToneInfo(it.tone, it.tone_cn, it.tone_number) }, s.explanation, s.pronunciation_tip) },
-                    examples = result.examples)
-            } catch (_: Exception) { _selectedWord.value = WordDetail(word = word, meaning = "查询失败") }
-            finally { _isLoadingWord.value = false }
+            // 两个查询并发
+            val twDeferred = async(Dispatchers.IO) {
+                try { ThaiWordApi.dict(word, twUrl, headers) } catch (_: Exception) { null }
+            }
+            val extDeferred = if (useExternalDict) {
+                async(Dispatchers.IO) { ThaiWordApi.dictApiLookup(word, config.dictApiUrl) }
+            } else null
 
-            // 外部词典查询
-            if (useExternalDict) {
-                val dictResult = withContext(Dispatchers.IO) { ThaiWordApi.dictApiLookup(word, config.dictApiUrl) }
-                _selectedDictResult.value = dictResult
+            // ThaiWord 结果
+            val twResult = twDeferred.await()
+            if (twResult != null) {
+                _selectedWord.value = WordDetail(word = twResult.word, ipa = twResult.ipa, meaning = twResult.chinese, word_class = twResult.word_class,
+                    syllables = twResult.syllables.map { s -> Syllable(syllable = s.syllable, text = s.text, ipa = s.ipa, consonant = s.consonant, consonant_class = s.consonant_class, vowel = s.vowel, vowel_length = s.vowel_length, tone_mark = s.tone_mark, final_consonant = s.final_consonant, final_type = s.final_type, tone = s.tone?.let { ToneInfo(it.tone, it.tone_cn, it.tone_number, it.explanation) }, explanation = s.explanation, pronunciation_tip = s.pronunciation_tip) },
+                    examples = twResult.examples)
+            } else {
+                _selectedWord.value = WordDetail(word = word, meaning = "查询失败")
+            }
+            _isLoadingWord.value = false
+
+            // 外部词典结果
+            if (extDeferred != null) {
+                _selectedDictResult.value = extDeferred.await()
             }
         }
     }

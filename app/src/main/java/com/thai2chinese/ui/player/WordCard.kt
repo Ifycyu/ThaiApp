@@ -65,7 +65,7 @@ fun WordCardContent(detail: WordDetail) {
         if (detail.meaning.isNotBlank()) { Text(detail.meaning, color = TextPrimary, fontSize = 18.sp, modifier = Modifier.padding(bottom = 12.dp)) }
         if (detail.syllables.isNotEmpty()) {
             Text("音节分解", color = TextMuted, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 detail.syllables.forEach { SyllableCard(it) }
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -131,16 +131,81 @@ fun DictApiCardContent(result: DictApiResult) {
 fun SyllableCard(syllable: Syllable) {
     val toneNum = syllable.tone?.tone_number ?: 0
     val color = toneColor(toneNum)
+    val consonantClassLabel = when (syllable.consonant_class) {
+        "high" -> "高辅音"
+        "mid" -> "中辅音"
+        "low" -> "低辅音"
+        else -> ""
+    }
+    val finalTypeLabel = when (syllable.final_type) {
+        "live" -> "活尾"
+        "dead" -> "死尾"
+        else -> ""
+    }
+
     Card(colors = CardDefaults.cardColors(containerColor = DarkSurface), shape = RoundedCornerShape(8.dp)) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-            Text(syllable.syllable, color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            if (syllable.ipa.isNotBlank()) { Text(syllable.ipa, color = TextSecondary, fontSize = 12.sp) }
-            if (toneNum > 0) {
-                Box(modifier = Modifier.padding(top = 4.dp).clip(RoundedCornerShape(4.dp)).background(color.copy(alpha = 0.2f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                    Text(syllable.tone?.tone_cn ?: "", color = color, fontSize = 11.sp)
+        Column(modifier = Modifier.padding(12.dp)) {
+            // 音节 + IPA + 声调
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(syllable.syllable, color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.width(8.dp))
+                if (syllable.ipa.isNotBlank()) { Text(syllable.ipa, color = TextSecondary, fontSize = 14.sp) }
+                Spacer(modifier = Modifier.weight(1f))
+                if (toneNum > 0) {
+                    Box(modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(color.copy(alpha = 0.2f)).padding(horizontal = 8.dp, vertical = 3.dp)) {
+                        Text("${toneNum} ${syllable.tone?.tone_cn ?: ""}", color = color, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
-            if (syllable.pronunciation_tip.isNotBlank()) { Text(syllable.pronunciation_tip, color = TextMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 2.dp)) }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // 辅音信息
+            if (syllable.consonant.isNotBlank()) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    DetailChip("辅音", syllable.consonant)
+                    if (consonantClassLabel.isNotBlank()) { DetailChip("类别", consonantClassLabel) }
+                }
+            }
+
+            // 元音信息
+            if (syllable.vowel.isNotBlank()) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    DetailChip("元音", syllable.vowel)
+                    if (syllable.vowel_length.isNotBlank()) { DetailChip("长短", if (syllable.vowel_length == "long") "长元音" else "短元音") }
+                }
+            }
+
+            // 声调标记
+            if (syllable.tone_mark != null) {
+                DetailChip("声调符", syllable.tone_mark)
+            }
+
+            // 尾辅音
+            if (syllable.final_consonant != null) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    DetailChip("尾辅音", syllable.final_consonant)
+                    if (finalTypeLabel.isNotBlank()) { DetailChip("尾音", finalTypeLabel) }
+                }
+            }
+
+            // 声调规则解释
+            if (syllable.tone?.explanation?.isNotBlank() == true) {
+                Text(syllable.tone.explanation, color = AccentBlue, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            }
+
+            // 发音提示
+            if (syllable.pronunciation_tip.isNotBlank()) {
+                Text("💡 ${syllable.pronunciation_tip}", color = TextMuted, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+            }
         }
+    }
+}
+
+@Composable
+fun DetailChip(label: String, value: String) {
+    Row(modifier = Modifier.padding(end = 12.dp, bottom = 2.dp)) {
+        Text("$label: ", color = TextMuted, fontSize = 12.sp)
+        Text(value, color = TextPrimary, fontSize = 12.sp)
     }
 }
