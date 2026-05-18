@@ -213,11 +213,17 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         editTargetIndex = -1; editTargetSentence = null
         val currentTask = _task.value ?: return
         val updated = currentTask.sentences.toMutableList()
-        // 如果泰语改了，清空旧的 words（需要重新分词）
-        val newWords = if (newText != sentence.text) emptyList() else sentence.words
-        updated[idx] = sentence.copy(text = newText, translation = newTranslation, words = newWords)
+        // 如果泰语改了，清空旧的 words 并重新分词
+        val textChanged = newText != sentence.text
+        updated[idx] = sentence.copy(text = newText, translation = newTranslation, words = if (textChanged) emptyList() else sentence.words)
         val newTask = currentTask.copy(sentences = updated)
         _task.value = newTask; store.put(newTask)
+
+        // 泰语改了，重新分词+翻译
+        if (textChanged) {
+            enrichingSentences.remove(idx)
+            tryEnrichSentence(idx)
+        }
     }
 
     override fun onCleared() { super.onCleared(); syncJob?.cancel(); player.release() }

@@ -53,10 +53,14 @@ fun SentenceItem(sentence: Sentence, isActive: Boolean, activeWord: Int,
         .combinedClickable(onClick = onSentenceClick, onLongClick = onLongClick)
         .padding(horizontal = 12.dp, vertical = 8.dp)) {
         Text(formatTime(sentence.start), color = TextMuted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
-        FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            sentence.words.forEachIndexed { wordIdx, word ->
-                WordGroup(word = word, isActive = wordIdx == activeWord, onClick = { onWordClick(word.text, sentence.text) })
+        if (sentence.words.isNotEmpty()) {
+            FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                sentence.words.forEachIndexed { wordIdx, word ->
+                    WordGroup(word = word, isActive = wordIdx == activeWord, onClick = { onWordClick(word.text, sentence.text) })
+                }
             }
+        } else {
+            Text(sentence.text, color = TextPrimary, fontSize = 16.sp)
         }
         if (sentence.translation.isNotBlank()) {
             Text(sentence.translation, color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))

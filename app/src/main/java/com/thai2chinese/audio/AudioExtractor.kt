@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
+import android.net.Uri
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.ByteBuffer
@@ -11,11 +12,26 @@ import java.nio.ByteOrder
 
 object AudioExtractor {
     fun extractToWav(context: Context, videoUri: String): File {
+        // 清理旧的临时文件
+        cleanupTempFiles(context)
+
+        // 先复制到临时文件，避免 content:// URI 问题
+        val tempVideo = File(context.cacheDir, "temp_video_${System.currentTimeMillis()}.mp4")
+        try {
+            context.contentResolver.openInputStream(Uri.parse(videoUri))?.use { input ->
+                tempVideo.outputStream().use { output -> input.copyTo(output) }
+            } ?: throw Exception("Cannot open video: $videoUri")
+        } catch (e: Exception) {
+            tempVideo.delete()
+            throw Exception("Failed to read video: ${e.message}")
+        }
+
         val extractor = MediaExtractor()
-        if (videoUri.startsWith("content://")) {
-            extractor.setDataSource(context, android.net.Uri.parse(videoUri), null)
-        } else {
-            extractor.setDataSource(videoUri)
+        try {
+            extractor.setDataSource(tempVideo.absolutePath)
+        } catch (e: Exception) {
+            tempVideo.delete()
+            throw Exception("Failed to read video format: ${e.message}")
         }
 
         var audioTrackIndex = -1
@@ -25,7 +41,10 @@ object AudioExtractor {
             val mime = format.getString(MediaFormat.KEY_MIME) ?: ""
             if (mime.startsWith("audio/")) { audioTrackIndex = i; audioFormat = format; break }
         }
-        if (audioTrackIndex < 0 || audioFormat == null) { extractor.release(); throw Exception("No audio track") }
+        if (audioTrackIndex < 0 || audioFormat == null) {
+            extractor.release(); tempVideo.delete()
+            throw Exception("No audio track found in video")
+        }
 
         extractor.selectTrack(audioTrackIndex)
         val sampleRate = audioFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)
@@ -67,6 +86,7 @@ object AudioExtractor {
             }
         }
         codec.stop(); codec.release(); extractor.release()
+        tempVideo.delete()
 
         val wavFile = File(context.cacheDir, "audio_${System.currentTimeMillis()}.wav")
         writeWav(wavFile, pcmData.toByteArray(), sampleRate, channelCount)
