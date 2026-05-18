@@ -1,22 +1,17 @@
 package com.thai2chinese.audio
 
 import android.content.Context
-import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
+import android.media.MediaMuxer
 import android.net.Uri
-import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.FileOutputStream
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 object AudioExtractor {
-    fun extractToWav(context: Context, videoUri: String): File {
-        // 清理旧的临时文件
+    fun extractAudio(context: Context, videoUri: String): File {
         cleanupTempFiles(context)
 
-        // 先复制到临时文件，避免 content:// URI 问题
+        // 复制视频到临时文件
         val tempVideo = File(context.cacheDir, "temp_video_${System.currentTimeMillis()}.mp4")
         try {
             context.contentResolver.openInputStream(Uri.parse(videoUri))?.use { input ->
@@ -35,63 +30,61 @@ object AudioExtractor {
             throw Exception("Failed to read video format: ${e.message}")
         }
 
+        // 找到音频轨道
         var audioTrackIndex = -1
         var audioFormat: MediaFormat? = null
         for (i in 0 until extractor.trackCount) {
             val format = extractor.getTrackFormat(i)
             val mime = format.getString(MediaFormat.KEY_MIME) ?: ""
-            if (mime.startsWith("audio/")) { audioTrackIndex = i; audioFormat = format; break }
+            if (mime.startsWith("audio/")) {
+                audioTrackIndex = i
+                audioFormat = format
+                break
+            }
         }
         if (audioTrackIndex < 0 || audioFormat == null) {
-            extractor.release(); tempVideo.delete()
+            extractor.release()
+            tempVideo.delete()
             throw Exception("No audio track found in video")
         }
 
+        // 用 MediaMuxer 提取音频为 M4A
+        val audioFile = File(context.cacheDir, "audio_${System.currentTimeMillis()}.m4a")
+        val muxer = MediaMuxer(audioFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+        val muxerTrack = muxer.addTrack(audioFormat)
+        muxer.start()
+
         extractor.selectTrack(audioTrackIndex)
-        val sampleRate = audioFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)
-        val channelCount = audioFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
-        val mime = audioFormat.getString(MediaFormat.KEY_MIME)!!
+        val buffer = java.nio.ByteBuffer.allocate(1024 * 1024) // 1MB buffer
+        val bufferInfo = android.media.MediaCodec.BufferInfo()
 
-        val codec = MediaCodec.createDecoderByType(mime)
-        codec.configure(audioFormat, null, null, 0)
-        codec.start()
+        while (true) {
+            val sampleSize = extractor.readSampleData(buffer, 0)
+            if (sampleSize < 0) break
 
-        val pcmData = ByteArrayOutputStream()
-        val bufferInfo = MediaCodec.BufferInfo()
-        var inputDone = false
-        var outputDone = false
+            bufferInfo.offset = 0
+            bufferInfo.size = sampleSize
+            bufferInfo.presentationTimeUs = extractor.sampleTime
+            bufferInfo.flags = extractor.sampleFlags
 
-        while (!outputDone) {
-            if (!inputDone) {
-                val inputIndex = codec.dequeueInputBuffer(10_000L)
-                if (inputIndex >= 0) {
-                    val inputBuffer = codec.getInputBuffer(inputIndex)!!
-                    val sampleSize = extractor.readSampleData(inputBuffer, 0)
-                    if (sampleSize < 0) {
-                        codec.queueInputBuffer(inputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
-                        inputDone = true
-                    } else {
-                        codec.queueInputBuffer(inputIndex, 0, sampleSize, extractor.sampleTime, 0)
-                        extractor.advance()
-                    }
-                }
-            }
-            val outputIndex = codec.dequeueOutputBuffer(bufferInfo, 10_000L)
-            if (outputIndex >= 0) {
-                val outputBuffer = codec.getOutputBuffer(outputIndex)!!
-                val chunk = ByteArray(bufferInfo.size)
-                outputBuffer.get(chunk)
-                pcmData.write(chunk)
-                codec.releaseOutputBuffer(outputIndex, false)
-                if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) outputDone = true
-            }
+            muxer.writeSampleData(muxerTrack, buffer, bufferInfo)
+            extractor.advance()
         }
-        codec.stop(); codec.release(); extractor.release()
+
+        muxer.stop()
+        muxer.release()
+        extractor.release()
         tempVideo.delete()
 
-        val wavFile = File(context.cacheDir, "audio_${System.currentTimeMillis()}.wav")
-        writeWav(wavFile, pcmData.toByteArray(), sampleRate, channelCount)
-        return wavFile
+        // 检查文件大小
+        val fileSize = audioFile.length()
+        val maxSize = 20L * 1024 * 1024 // 20MB
+        if (fileSize > maxSize) {
+            audioFile.delete()
+            throw Exception("音频太大（${fileSize / 1024 / 1024}MB），请使用更短的视频")
+        }
+
+        return audioFile
     }
 
     private fun cleanupTempFiles(context: Context) {
@@ -99,30 +92,13 @@ object AudioExtractor {
             val cacheDir = context.cacheDir
             val now = System.currentTimeMillis()
             cacheDir.listFiles()?.forEach { file ->
-                // 清理超过 1 小时的临时文件
                 if (file.name.startsWith("temp_video_") && now - file.lastModified() > 3600_000) {
                     file.delete()
                 }
-                if (file.name.startsWith("audio_") && file.extension == "wav" && now - file.lastModified() > 3600_000) {
+                if (file.name.startsWith("audio_") && file.extension == "m4a" && now - file.lastModified() > 3600_000) {
                     file.delete()
                 }
             }
         } catch (e: Exception) { e.printStackTrace() }
-    }
-
-    private fun writeWav(file: File, pcmData: ByteArray, sampleRate: Int, channels: Int) {
-        val bitsPerSample = 16
-        val byteRate = sampleRate * channels * bitsPerSample / 8
-        val blockAlign = channels * bitsPerSample / 8
-        FileOutputStream(file).use { fos ->
-            val header = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN)
-            header.put("RIFF".toByteArray()); header.putInt(36 + pcmData.size)
-            header.put("WAVE".toByteArray()); header.put("fmt ".toByteArray())
-            header.putInt(16); header.putShort(1); header.putShort(channels.toShort())
-            header.putInt(sampleRate); header.putInt(byteRate)
-            header.putShort(blockAlign.toShort()); header.putShort(bitsPerSample.toShort())
-            header.put("data".toByteArray()); header.putInt(pcmData.size)
-            fos.write(header.array()); fos.write(pcmData)
-        }
     }
 }

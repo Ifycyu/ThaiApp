@@ -69,10 +69,10 @@ class ProcessingService : Service() {
             val headers = ThaiWordHeaders(config.dictApiUrl, config.translateEndpoint, config.translateToken, config.translateModel)
 
             updateProgress("提取音频...", 0.1f)
-            val wavFile = withContext(Dispatchers.IO) { AudioExtractor.extractToWav(this@ProcessingService, videoUri) }
+            val audioFile = withContext(Dispatchers.IO) { AudioExtractor.extractAudio(this@ProcessingService, videoUri) }
 
             updateProgress("Whisper 转写中...", 0.25f)
-            val whisperResult = withContext(Dispatchers.IO) { WhisperApi.transcribe(wavFile, config.whisperBaseUrl, config.whisperApiKey) }
+            val whisperResult = withContext(Dispatchers.IO) { WhisperApi.transcribe(audioFile, config.whisperBaseUrl, config.whisperApiKey) }
 
             val sentences = whisperResult.segments.map { seg ->
                 val words = if (seg.words.isNotEmpty()) seg.words.map { Word(text = it.word.trim(), start = it.start, end = it.end) }
@@ -121,7 +121,7 @@ class ProcessingService : Service() {
 
             val task = TaskInfo(id = taskId, filename = filename, status = "completed", sentences = enrichedSentences, videoUri = videoUri)
             store.put(task)
-            wavFile.delete()
+            audioFile.delete()
             updateProgress("完成", 1f)
 
         } catch (e: Exception) {

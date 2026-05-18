@@ -23,7 +23,7 @@ object WhisperApi {
             .addFormDataPart("language", "th")
             .addFormDataPart("response_format", "verbose_json")
             .addFormDataPart("timestamp_granularities", "segment,word")
-            .addFormDataPart("file", audioFile.name, audioFile.asRequestBody("audio/wav".toMediaType()))
+            .addFormDataPart("file", audioFile.name, audioFile.asRequestBody("audio/mp4".toMediaType()))
             .build()
 
         val request = Request.Builder()
