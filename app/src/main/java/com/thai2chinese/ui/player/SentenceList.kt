@@ -34,7 +34,7 @@ fun SentenceList(
     val listState = rememberLazyListState()
     LaunchedEffect(activeSentence) { if (activeSentence >= 0) listState.animateScrollToItem(activeSentence) }
 
-    LazyColumn(state = listState, modifier = modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    LazyColumn(state = listState, modifier = modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         itemsIndexed(sentences) { index, sentence ->
             SentenceItem(sentence = sentence, isActive = index == activeSentence,
                 activeWord = if (index == activeSentence) activeWord else -1,
