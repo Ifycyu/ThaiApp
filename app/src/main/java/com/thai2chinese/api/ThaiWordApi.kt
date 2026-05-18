@@ -57,6 +57,20 @@ object ThaiWordApi {
 
     fun ttsUrl(word: String, baseUrl: String): String = "${baseUrl.trimEnd('/')}/api/tts/$word"
 
+    fun learn(sentence: String, baseUrl: String, headers: ThaiWordHeaders): String {
+        val jsonBody = gson.toJson(mapOf("sentence" to sentence))
+        val builder = Request.Builder()
+            .url("${baseUrl.trimEnd('/')}/api/learn")
+            .post(jsonBody.toRequestBody("application/json".toMediaType()))
+        if (headers.translateEndpoint.isNotBlank()) builder.header("X-Translate-Endpoint", headers.translateEndpoint)
+        if (headers.translateToken.isNotBlank()) builder.header("X-Translate-Token", headers.translateToken)
+        if (headers.translateModel.isNotBlank()) builder.header("X-Translate-Model", headers.translateModel)
+        val response = client.newCall(builder.build()).execute()
+        val body = response.body?.string() ?: throw Exception("Empty response")
+        if (!response.isSuccessful) throw Exception("Learn error ${response.code}: $body")
+        return body
+    }
+
     fun dictApiLookup(word: String, dictApiUrl: String): DictApiResult? {
         if (dictApiUrl.isBlank()) return null
         try {
@@ -87,4 +101,17 @@ data class DictApiResult(
     val fyfx: String = "",
     val thesaurus: String = "",
     val examp: List<String> = emptyList()
+)
+
+data class LearnResult(
+    val translation: String = "",
+    val vocabulary: List<VocabItem> = emptyList(),
+    val grammar: List<String> = emptyList(),
+    val notes: List<String> = emptyList()
+)
+
+data class VocabItem(
+    val word: String = "",
+    val meaning: String = "",
+    val usage: String = ""
 )

@@ -3,6 +3,8 @@ package com.thai2chinese.ui.player
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -30,6 +32,8 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     val selectedDictResult by viewModel.selectedDictResult.collectAsState()
     val isLoadingWord by viewModel.isLoadingWord.collectAsState()
     val menuSentence by viewModel.menuSentence.collectAsState()
+    val learnResult by viewModel.learnResult.collectAsState()
+    val isLearning by viewModel.isLearning.collectAsState()
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val clipboardManager = LocalClipboardManager.current
@@ -41,6 +45,9 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
 
     // 词卡
     WordCardSheet(wordDetail = selectedWord, dictResult = selectedDictResult, isLoading = isLoadingWord, onDismiss = { viewModel.dismissWordCard() })
+
+    // 句子分析
+    LearnSheet(result = learnResult, isLoading = isLearning, onDismiss = { viewModel.dismissLearn() })
 
     // 长按菜单
     SentenceMenuSheet(sentence = menuSentence, onDismiss = { viewModel.dismissSentenceMenu() },
@@ -62,7 +69,9 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
             captured?.let { viewModel.prepareEdit(it) }
             showEditDialog = true
             viewModel.dismissSentenceMenu()
-        })
+        },
+        onLearn = { viewModel.learnSentence() }
+    )
 
     // 编辑对话框
     // 删除确认
@@ -117,4 +126,30 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
 fun VideoPlayerView(player: androidx.media3.common.Player, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     AndroidView(factory = { PlayerView(context).apply { this.player = player; useController = true } }, modifier = modifier)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LearnSheet(result: String?, isLoading: Boolean, onDismiss: () -> Unit) {
+    if (result == null && !isLoading) return
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = DarkCard, contentColor = TextPrimary) {
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = AccentBlue)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("AI 分析中...", color = TextSecondary)
+                }
+            }
+        } else if (result != null) {
+            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp)) {
+                Text("句子分析", color = AccentBlue, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(12.dp))
+                // 直接显示 AI 返回的 Markdown 文本
+                Text(result, color = TextPrimary, fontSize = 15.sp, lineHeight = 24.sp)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+    }
 }

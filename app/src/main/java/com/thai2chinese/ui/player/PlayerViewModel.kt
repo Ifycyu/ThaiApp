@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
+import com.google.gson.JsonParser
 import com.thai2chinese.api.DictApiResult
 import com.thai2chinese.api.ThaiWordApi
 import com.thai2chinese.api.ThaiWordHeaders
@@ -195,6 +196,34 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             } catch (_: Exception) {}
         }
     }
+
+    // 句子分析
+    private val _learnResult = MutableStateFlow<String?>(null)
+    val learnResult: StateFlow<String?> = _learnResult
+    private val _isLearning = MutableStateFlow(false)
+    val isLearning: StateFlow<Boolean> = _isLearning
+
+    fun learnSentence() {
+        val sentence = _menuSentence.value ?: return
+        _menuSentence.value = null
+        _isLearning.value = true; _learnResult.value = null
+        val twUrl = config.thaiwordUrl; val headers = twHeaders()
+
+        viewModelScope.launch {
+            try {
+                val raw = withContext(Dispatchers.IO) { ThaiWordApi.learn(sentence.text, twUrl, headers) }
+                // 解析 JSON 提取 explanation 字段
+                val json = com.google.gson.JsonParser.parseString(raw).asJsonObject
+                _learnResult.value = json.get("explanation")?.asString ?: raw
+            } catch (e: Exception) {
+                _learnResult.value = "分析失败: ${e.message}"
+            } finally {
+                _isLearning.value = false
+            }
+        }
+    }
+
+    fun dismissLearn() { _learnResult.value = null }
 
     fun deleteSentence() {
         val idx = menuSentenceIndex
