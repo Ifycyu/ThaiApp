@@ -2,19 +2,28 @@ package com.thai2chinese.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val DarkBg = Color(0xFF1a1a2e)
-val DarkSurface = Color(0xFF16213e)
-val DarkCard = Color(0xFF1f2940)
-val AccentBlue = Color(0xFF4a9eff)
-val AccentPurple = Color(0xFF667eea)
-val TextPrimary = Color(0xFFe0e0e0)
-val TextSecondary = Color(0xFF9ca3af)
-val TextMuted = Color(0xFF6b7280)
+// 背景
+val DarkBg = Color(0xFFF8FAEF)
+val DarkSurface = Color(0xFFD8DBCF)
+val DarkCard = Color(0xFFE8EBDF)
+
+// 强调色
+val AccentBlue = Color(0xFF3B7DD8)
+val AccentPurple = Color(0xFF7C5CBF)
+
+// 文字
+val TextPrimary = Color(0xFF1A1D15)
+val TextSecondary = Color(0xFF4F5249)
+val TextMuted = Color(0xFF8A8D84)
+
+// 声调颜色
 val ToneMid = Color(0xFF6B7280)
 val ToneLow = Color(0xFFEF4444)
 val ToneFalling = Color(0xFFF59E0B)
 val ToneHigh = Color(0xFF3B82F6)
 val ToneRising = Color(0xFF10B981)
+
+// 高亮
 val ActiveGreen = Color(0xFF2E7D6F)
 
 fun toneColor(toneNumber: Int): Color = when (toneNumber) {

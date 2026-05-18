@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.ThaiApp" parent="android:Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">#FF1a1a2e</item>
-        <item name="android:navigationBarColor">#FF1a1a2e</item>
+    <style name="Theme.ThaiApp" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#FFF8FAEF</item>
+        <item name="android:navigationBarColor">#FFF8FAEF</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>
