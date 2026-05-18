@@ -67,7 +67,7 @@ fun SentenceItem(sentence: Sentence, isActive: Boolean, activeWord: Int,
                         Text(ipa, color = TextMuted, fontSize = 13.sp, lineHeight = 16.sp, textAlign = TextAlign.Center)
                         Text(word.text, color = if (isActive) ActiveGreen else TextPrimary,
                             fontSize = if (isActive) 20.sp else 18.sp,
-                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                            fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center, maxLines = 1,
                             modifier = if (isActive) Modifier.border(1.5.dp, ActiveGreen, RoundedCornerShape(4.dp)).padding(horizontal = 4.dp, vertical = 2.dp) else Modifier)
                     }
