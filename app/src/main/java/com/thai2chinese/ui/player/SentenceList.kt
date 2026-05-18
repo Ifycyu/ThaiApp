@@ -89,7 +89,7 @@ fun SentenceItem(sentence: Sentence, isActive: Boolean, activeWord: Int,
 }
 
 @Composable
-fun ThaiWordChip(word: Word, isActive: Boolean, onClick: () -> Unit) {
+fun RowScope.ThaiWordChip(word: Word, isActive: Boolean, onClick: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.weight(1f)
             .clip(RoundedCornerShape(8.dp))
