@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.thai2chinese.data.Sentence
@@ -33,7 +34,7 @@ fun SentenceList(
     val listState = rememberLazyListState()
     LaunchedEffect(activeSentence) { if (activeSentence >= 0) listState.animateScrollToItem(activeSentence) }
 
-    LazyColumn(state = listState, modifier = modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    LazyColumn(state = listState, modifier = modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         itemsIndexed(sentences) { index, sentence ->
             SentenceItem(sentence = sentence, isActive = index == activeSentence,
                 activeWord = if (index == activeSentence) activeWord else -1,
@@ -44,27 +45,57 @@ fun SentenceList(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SentenceItem(sentence: Sentence, isActive: Boolean, activeWord: Int,
     onWordClick: (String, String) -> Unit, onSentenceClick: () -> Unit, onLongClick: () -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+    Column(modifier = Modifier.fillMaxWidth()
+        .clip(RoundedCornerShape(12.dp))
         .background(if (isActive) DarkCard else Color.Transparent)
         .combinedClickable(onClick = onSentenceClick, onLongClick = onLongClick)
-        .padding(horizontal = 12.dp, vertical = 8.dp)) {
-        Text(formatTime(sentence.start), color = TextMuted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+        .padding(horizontal = 16.dp, vertical = 12.dp)) {
+
+        // Row 1: Romanization
         if (sentence.words.isNotEmpty()) {
-            FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            val romanLine = sentence.words.joinToString("  ") { w ->
+                when { w.ipa.isNotBlank() -> w.ipa; w.roman.isNotBlank() -> w.roman; else -> w.text }
+            }
+            Text(romanLine, color = TextMuted, fontSize = 13.sp, lineHeight = 18.sp,
+                modifier = Modifier.padding(bottom = 6.dp))
+        }
+
+        // Row 2: Thai words with active word highlighted
+        if (sentence.words.isNotEmpty()) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 sentence.words.forEachIndexed { wordIdx, word ->
-                    WordGroup(word = word, isActive = wordIdx == activeWord, onClick = { onWordClick(word.text, sentence.text) })
+                    ThaiWordChip(word = word, isActive = wordIdx == activeWord,
+                        onClick = { onWordClick(word.text, sentence.text) })
                 }
             }
         } else {
-            Text(sentence.text, color = TextPrimary, fontSize = 16.sp)
+            Text(sentence.text, color = TextPrimary, fontSize = 20.sp, lineHeight = 28.sp,
+                modifier = Modifier.padding(bottom = 4.dp))
         }
+
+        // Row 3: Translation
         if (sentence.translation.isNotBlank()) {
-            Text(sentence.translation, color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
+            Text(sentence.translation, color = TextSecondary, fontSize = 14.sp, lineHeight = 20.sp,
+                modifier = Modifier.padding(top = 8.dp))
         }
+    }
+}
+
+@Composable
+fun ThaiWordChip(word: Word, isActive: Boolean, onClick: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clip(RoundedCornerShape(8.dp))
+            .background(if (isActive) ActiveGreen else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 6.dp, vertical = 4.dp)) {
+        Text(word.text, color = if (isActive) Color.White else TextPrimary,
+            fontSize = if (isActive) 20.sp else 18.sp,
+            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+            maxLines = 1)
     }
 }
 
@@ -83,7 +114,6 @@ fun SentenceMenuSheet(
     if (sentence == null) return
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = DarkCard, contentColor = TextPrimary) {
         Column(modifier = Modifier.padding(bottom = 24.dp)) {
-            // 预览
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
                 Text(sentence.text, color = AccentBlue, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 if (sentence.translation.isNotBlank()) {
@@ -92,7 +122,6 @@ fun SentenceMenuSheet(
             }
             @Suppress("DEPRECATION")
             Divider(color = DarkSurface, modifier = Modifier.padding(vertical = 4.dp))
-            // 操作
             MenuAction("复制泰语") { onCopy() }
             MenuAction("复制双语字幕") { onCopyBilingual() }
             MenuAction("重新翻译") { onRetranslate() }
@@ -104,7 +133,7 @@ fun SentenceMenuSheet(
 }
 
 @Composable
-fun MenuAction(text: String, color: androidx.compose.ui.graphics.Color = TextPrimary, onClick: () -> Unit) {
+fun MenuAction(text: String, color: Color = TextPrimary, onClick: () -> Unit) {
     TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
         Text(text, color = color, fontSize = 16.sp, modifier = Modifier.fillMaxWidth())
     }
@@ -128,19 +157,6 @@ fun EditSentenceDialog(sentence: Sentence?, onDismiss: () -> Unit, onSave: (Stri
         },
         confirmButton = { TextButton(onClick = { onSave(text, translation); onDismiss() }) { Text("保存", color = AccentBlue) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消", color = TextMuted) } })
-}
-
-@Composable
-fun WordGroup(word: Word, isActive: Boolean, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clip(RoundedCornerShape(4.dp))
-            .background(if (isActive) AccentBlue.copy(alpha = 0.25f) else Color.Transparent)
-            .clickable(onClick = onClick).padding(horizontal = 3.dp, vertical = 2.dp)) {
-        val romanText = when { word.ipa.isNotBlank() -> word.ipa; word.roman.isNotBlank() -> word.roman; else -> "" }
-        if (romanText.isNotBlank()) { Text(romanText, color = if (isActive) AccentBlue else TextMuted, fontSize = 10.sp, maxLines = 1) }
-        Text(word.text, color = if (isActive) Color.White else TextPrimary, fontSize = if (isActive) 18.sp else 16.sp,
-            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal, maxLines = 1)
-    }
 }
 
 fun formatTime(seconds: Double): String {

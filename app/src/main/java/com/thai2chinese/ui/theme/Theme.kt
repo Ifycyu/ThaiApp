@@ -15,6 +15,7 @@ val ToneLow = Color(0xFFEF4444)
 val ToneFalling = Color(0xFFF59E0B)
 val ToneHigh = Color(0xFF3B82F6)
 val ToneRising = Color(0xFF10B981)
+val ActiveGreen = Color(0xFF2E7D6F)
 
 fun toneColor(toneNumber: Int): Color = when (toneNumber) {
     1 -> ToneMid; 2 -> ToneLow; 3 -> ToneFalling; 4 -> ToneHigh; 5 -> ToneRising

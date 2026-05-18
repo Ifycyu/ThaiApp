@@ -11,11 +11,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -146,10 +150,82 @@ fun LearnSheet(result: String?, isLoading: Boolean, onDismiss: () -> Unit) {
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp)) {
                 Text("句子分析", color = AccentBlue, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(12.dp))
-                // 直接显示 AI 返回的 Markdown 文本
-                Text(result, color = TextPrimary, fontSize = 15.sp, lineHeight = 24.sp)
+                MarkdownText(result)
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
+}
+
+@Composable
+fun MarkdownText(markdown: String) {
+    val lines = markdown.split("\n")
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        var i = 0
+        while (i < lines.size) {
+            val line = lines[i].trimEnd()
+            when {
+                line.startsWith("### ") -> {
+                    Text(line.removePrefix("### "), color = AccentPurple, fontSize = 15.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp))
+                }
+                line.startsWith("## ") -> {
+                    Text(line.removePrefix("## "), color = AccentBlue, fontSize = 16.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+                }
+                line.startsWith("# ") -> {
+                    Text(line.removePrefix("# "), color = AccentBlue, fontSize = 18.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
+                }
+                line.matches(Regex("^\\d+\\.\\s.*")) -> {
+                    val num = line.replaceFirst(Regex("^(\\d+\\.\\s).*"), "$1")
+                    val text = line.removePrefix(num)
+                    Row(modifier = Modifier.fillMaxWidth().padding(start = 4.dp)) {
+                        Text(num, color = AccentBlue, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        RichText(text, fontSize = 15.sp, color = TextPrimary)
+                    }
+                }
+                line.startsWith("- ") || line.startsWith("* ") -> {
+                    Row(modifier = Modifier.fillMaxWidth().padding(start = 4.dp)) {
+                        Text("  •  ", color = AccentBlue, fontSize = 15.sp)
+                        RichText(line.removePrefix("- ").removePrefix("* "), fontSize = 15.sp, color = TextPrimary)
+                    }
+                }
+                line.isBlank() -> { Spacer(modifier = Modifier.height(6.dp)) }
+                else -> { RichText(line, fontSize = 15.sp, color = TextPrimary) }
+            }
+            i++
+        }
+    }
+}
+
+@Composable
+fun RichText(text: String, fontSize: TextUnit, color: Color) {
+    // Parse **bold** segments
+    val parts = mutableListOf<Pair<String, Boolean>>()
+    val regex = Regex("\\*\\*(.*?)\\*\\*")
+    var lastEnd = 0
+    regex.findAll(text).forEach { match ->
+        if (match.range.first > lastEnd) parts.add(text.substring(lastEnd, match.range.first) to false)
+        parts.add(match.groupValues[1] to true)
+        lastEnd = match.range.last + 1
+    }
+    if (lastEnd < text.length) parts.add(text.substring(lastEnd) to false)
+
+    if (parts.isEmpty()) {
+        Text(text, color = color, fontSize = fontSize, lineHeight = (fontSize.value * 1.5).sp)
+        return
+    }
+
+    Text(buildAnnotatedString {
+        parts.forEach { (segment, isBold) ->
+            if (isBold) {
+                pushStyle(SpanStyle(fontWeight = FontWeight.Bold, color = AccentBlue))
+                append(segment)
+                pop()
+            } else {
+                append(segment)
+            }
+        }
+    }, color = color, fontSize = fontSize, lineHeight = (fontSize.value * 1.5).sp)
 }
