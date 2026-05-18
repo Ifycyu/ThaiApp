@@ -2,6 +2,7 @@ package com.thai2chinese.ui.player
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -61,15 +62,14 @@ fun SentenceItem(sentence: Sentence, isActive: Boolean, activeWord: Int,
                     val ipa = when { word.ipa.isNotBlank() -> word.ipa; word.roman.isNotBlank() -> word.roman; else -> word.text }
                     val isActive = wordIdx == activeWord
                     Column(horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.clip(RoundedCornerShape(8.dp))
-                            .background(if (isActive) ActiveGreen else Color.Transparent)
-                            .clickable { onWordClick(word.text, sentence.text) }
+                        modifier = Modifier.clickable { onWordClick(word.text, sentence.text) }
                             .padding(horizontal = 6.dp, vertical = 4.dp)) {
                         Text(ipa, color = TextMuted, fontSize = 13.sp, lineHeight = 16.sp, textAlign = TextAlign.Center)
-                        Text(word.text, color = if (isActive) Color.White else TextPrimary,
+                        Text(word.text, color = if (isActive) ActiveGreen else TextPrimary,
                             fontSize = if (isActive) 20.sp else 18.sp,
                             fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                            textAlign = TextAlign.Center, maxLines = 1)
+                            textAlign = TextAlign.Center, maxLines = 1,
+                            modifier = if (isActive) Modifier.border(1.5.dp, ActiveGreen, RoundedCornerShape(4.dp)).padding(horizontal = 4.dp, vertical = 2.dp) else Modifier)
                     }
                 }
             }
