@@ -18,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,8 +34,15 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel()
 ) {
     val tasks by viewModel.tasks.collectAsState()
-    val pickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { onNavigateToProcessing(it.toString(), "video.mp4") }
+    val context = LocalContext.current
+    val pickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        uri?.let {
+            // 持久化权限，重启后仍可访问
+            try {
+                context.contentResolver.takePersistableUriPermission(it, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (_: Exception) {}
+            onNavigateToProcessing(it.toString(), "video.mp4")
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize().background(DarkBg).padding(16.dp)) {
@@ -45,7 +53,7 @@ fun HomeScreen(
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth().clickable { pickerLauncher.launch("video/*") },
+        Card(modifier = Modifier.fillMaxWidth().clickable { pickerLauncher.launch(arrayOf("video/*")) },
             colors = CardDefaults.cardColors(containerColor = DarkCard), shape = RoundedCornerShape(12.dp)) {
             Row(modifier = Modifier.fillMaxWidth().padding(24.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.FolderOpen, null, tint = AccentBlue, modifier = Modifier.size(32.dp))

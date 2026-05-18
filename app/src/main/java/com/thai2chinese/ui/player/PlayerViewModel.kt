@@ -1,7 +1,6 @@
 package com.thai2chinese.ui.player
 
 import android.app.Application
-import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
@@ -25,7 +24,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
     private val store = TaskStore(application)
@@ -56,27 +54,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         translateModel = config.translateModel
     )
 
-    private fun copyVideoToLocal(videoUri: String): String {
-        if (videoUri.startsWith("file://")) return videoUri
-        try {
-            val inputStream = context.contentResolver.openInputStream(Uri.parse(videoUri)) ?: return videoUri
-            val localFile = File(context.filesDir, "video_${System.currentTimeMillis()}.mp4")
-            inputStream.use { input -> localFile.outputStream().use { output -> input.copyTo(output) } }
-            return "file://${localFile.absolutePath}"
-        } catch (_: Exception) { return videoUri }
-    }
-
     fun loadTask(taskId: String) {
         val t = store.get(taskId) ?: return
         _task.value = t
         if (t.videoUri.isNotEmpty()) {
-            val localUri = copyVideoToLocal(t.videoUri)
-            if (localUri != t.videoUri) {
-                val updated = t.copy(videoUri = localUri)
-                _task.value = updated
-                store.put(updated)
-            }
-            player.setMediaItem(MediaItem.fromUri(localUri))
+            player.setMediaItem(MediaItem.fromUri(t.videoUri))
             player.prepare()
         }
         startSync()
