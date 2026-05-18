@@ -43,7 +43,13 @@ fun HomeScreen(
                 context.contentResolver.openInputStream(it)?.use { input ->
                     cacheFile.outputStream().use { output -> input.copyTo(output) }
                 }
-                onNavigateToProcessing("file://${cacheFile.absolutePath}", "video.mp4")
+                val filename = context.contentResolver.query(it, null, null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        if (idx >= 0) cursor.getString(idx) else null
+                    } else null
+                } ?: "video.mp4"
+                onNavigateToProcessing("file://${cacheFile.absolutePath}", filename)
             } catch (e: Exception) {
                 e.printStackTrace()
                 onNavigateToProcessing(it.toString(), "video.mp4")
