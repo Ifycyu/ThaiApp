@@ -23,4 +23,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         _tasks.value = store.getAll()
     }
     fun deleteTask(id: String) { store.delete(id); refresh() }
+    fun renameTask(id: String, newName: String) {
+        store.get(id)?.let { store.put(it.copy(filename = newName)); refresh() }
+    }
 }
