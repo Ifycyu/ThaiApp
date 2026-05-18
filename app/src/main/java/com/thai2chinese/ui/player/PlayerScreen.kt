@@ -154,7 +154,10 @@ fun VideoPlayerView(player: androidx.media3.common.Player, modifier: Modifier = 
         PlayerView(context).apply {
             this.player = player
             useController = false
+            showBuffering = PlayerView.SHOW_BUFFERING_NEVER
             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+            useArtwork = false
+            setShutterColor(android.graphics.Color.TRANSPARENT)
         }
     }, modifier = modifier)
 }
