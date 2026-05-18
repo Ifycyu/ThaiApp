@@ -23,6 +23,7 @@ object WhisperApi {
             .addFormDataPart("language", "th")
             .addFormDataPart("response_format", "verbose_json")
             .addFormDataPart("timestamp_granularities", "segment,word")
+            .addFormDataPart("prompt", "输出较长的完整句子，不要拆分成短句")
             .addFormDataPart("file", audioFile.name, audioFile.asRequestBody("audio/mp4".toMediaType()))
             .build()
 
