@@ -93,6 +93,22 @@ object AudioExtractor {
         return wavFile
     }
 
+    private fun cleanupTempFiles(context: Context) {
+        try {
+            val cacheDir = context.cacheDir
+            val now = System.currentTimeMillis()
+            cacheDir.listFiles()?.forEach { file ->
+                // 清理超过 1 小时的临时文件
+                if (file.name.startsWith("temp_video_") && now - file.lastModified() > 3600_000) {
+                    file.delete()
+                }
+                if (file.name.startsWith("audio_") && file.extension == "wav" && now - file.lastModified() > 3600_000) {
+                    file.delete()
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
     private fun writeWav(file: File, pcmData: ByteArray, sampleRate: Int, channels: Int) {
         val bitsPerSample = 16
         val byteRate = sampleRate * channels * bitsPerSample / 8
