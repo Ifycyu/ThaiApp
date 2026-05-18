@@ -35,6 +35,7 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     val clipboardManager = LocalClipboardManager.current
     var showEditDialog by remember { mutableStateOf(false) }
     var editSentence by remember { mutableStateOf<com.thai2chinese.data.Sentence?>(null) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     LaunchedEffect(taskId) { viewModel.loadTask(taskId) }
 
@@ -54,9 +55,25 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
             viewModel.dismissSentenceMenu()
         },
         onRetranslate = { viewModel.retranslateSentence() },
-        onEdit = { editSentence = menuSentence; viewModel.prepareEdit(); showEditDialog = true; viewModel.dismissSentenceMenu() })
+        onDelete = { showDeleteConfirm = true; viewModel.dismissSentenceMenu() },
+        onEdit = {
+            val captured = menuSentence
+            editSentence = captured
+            captured?.let { viewModel.prepareEdit(it) }
+            showEditDialog = true
+            viewModel.dismissSentenceMenu()
+        })
 
     // 编辑对话框
+    // 删除确认
+    if (showDeleteConfirm) {
+        AlertDialog(onDismissRequest = { showDeleteConfirm = false }, containerColor = DarkCard,
+            title = { Text("删除句子", color = TextPrimary) },
+            text = { Text("确定删除这句字幕吗？", color = TextSecondary) },
+            confirmButton = { TextButton(onClick = { viewModel.deleteSentence(); showDeleteConfirm = false }) { Text("删除", color = ToneLow) } },
+            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("取消", color = TextMuted) } })
+    }
+
     if (showEditDialog && editSentence != null) {
         EditSentenceDialog(sentence = editSentence, onDismiss = { showEditDialog = false },
             onSave = { text, translation -> viewModel.editSentence(text, translation); showEditDialog = false })

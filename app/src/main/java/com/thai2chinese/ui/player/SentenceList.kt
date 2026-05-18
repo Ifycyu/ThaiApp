@@ -72,7 +72,8 @@ fun SentenceMenuSheet(
     onCopy: () -> Unit,
     onCopyBilingual: () -> Unit,
     onRetranslate: () -> Unit,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
     if (sentence == null) return
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = DarkCard, contentColor = TextPrimary) {
@@ -91,14 +92,15 @@ fun SentenceMenuSheet(
             MenuAction("复制双语字幕") { onCopyBilingual() }
             MenuAction("重新翻译") { onRetranslate() }
             MenuAction("编辑字幕") { onEdit() }
+            MenuAction("删除句子", color = ToneLow) { onDelete() }
         }
     }
 }
 
 @Composable
-fun MenuAction(text: String, onClick: () -> Unit) {
+fun MenuAction(text: String, color: androidx.compose.ui.graphics.Color = TextPrimary, onClick: () -> Unit) {
     TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-        Text(text, color = TextPrimary, fontSize = 16.sp, modifier = Modifier.fillMaxWidth())
+        Text(text, color = color, fontSize = 16.sp, modifier = Modifier.fillMaxWidth())
     }
 }
 

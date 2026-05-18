@@ -173,9 +173,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
     fun dismissSentenceMenu() { _menuSentence.value = null }
 
-    fun prepareEdit() {
+    fun prepareEdit(sentence: Sentence) {
         editTargetIndex = menuSentenceIndex
-        editTargetSentence = _menuSentence.value
+        editTargetSentence = sentence
     }
 
     fun retranslateSentence() {
@@ -196,13 +196,26 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun deleteSentence() {
+        val idx = menuSentenceIndex
+        if (idx < 0) return
+        _menuSentence.value = null
+        val currentTask = _task.value ?: return
+        val updated = currentTask.sentences.toMutableList()
+        updated.removeAt(idx)
+        val newTask = currentTask.copy(sentences = updated)
+        _task.value = newTask; store.put(newTask)
+    }
+
     fun editSentence(newText: String, newTranslation: String) {
         val idx = editTargetIndex; val sentence = editTargetSentence ?: return
-        if (idx < 0) return
+        if (idx < 0 || newText.isBlank()) return
         editTargetIndex = -1; editTargetSentence = null
         val currentTask = _task.value ?: return
         val updated = currentTask.sentences.toMutableList()
-        updated[idx] = sentence.copy(text = newText, translation = newTranslation)
+        // 如果泰语改了，清空旧的 words（需要重新分词）
+        val newWords = if (newText != sentence.text) emptyList() else sentence.words
+        updated[idx] = sentence.copy(text = newText, translation = newTranslation, words = newWords)
         val newTask = currentTask.copy(sentences = updated)
         _task.value = newTask; store.put(newTask)
     }
