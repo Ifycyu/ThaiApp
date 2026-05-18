@@ -165,11 +165,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val _menuSentence = MutableStateFlow<Sentence?>(null)
     val menuSentence: StateFlow<Sentence?> = _menuSentence
     private var menuSentenceIndex = -1
+    private var editTargetIndex = -1
+    private var editTargetSentence: Sentence? = null
 
     fun showSentenceMenu(index: Int, sentence: Sentence) {
         menuSentenceIndex = index; _menuSentence.value = sentence
     }
     fun dismissSentenceMenu() { _menuSentence.value = null }
+
+    fun prepareEdit() {
+        editTargetIndex = menuSentenceIndex
+        editTargetSentence = _menuSentence.value
+    }
 
     fun retranslateSentence() {
         val idx = menuSentenceIndex; val sentence = _menuSentence.value ?: return
@@ -190,9 +197,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun editSentence(newText: String, newTranslation: String) {
-        val idx = menuSentenceIndex; val sentence = _menuSentence.value ?: return
+        val idx = editTargetIndex; val sentence = editTargetSentence ?: return
         if (idx < 0) return
-        _menuSentence.value = null
+        editTargetIndex = -1; editTargetSentence = null
         val currentTask = _task.value ?: return
         val updated = currentTask.sentences.toMutableList()
         updated[idx] = sentence.copy(text = newText, translation = newTranslation)

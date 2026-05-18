@@ -54,7 +54,7 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
             viewModel.dismissSentenceMenu()
         },
         onRetranslate = { viewModel.retranslateSentence() },
-        onEdit = { editSentence = menuSentence; showEditDialog = true; viewModel.dismissSentenceMenu() })
+        onEdit = { editSentence = menuSentence; viewModel.prepareEdit(); showEditDialog = true; viewModel.dismissSentenceMenu() })
 
     // 编辑对话框
     if (showEditDialog && editSentence != null) {
