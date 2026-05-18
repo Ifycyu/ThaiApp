@@ -350,6 +350,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
                 // 先展示未分析的结果
                 val taskNow = _task.value ?: return@launch
+                if (newSentences.isEmpty()) {
+                    _retranscribeProgress.value = "该时间段未识别到内容"; delay(2000); _retranscribeProgress.value = null
+                    return@launch
+                }
                 val baseFiltered = taskNow.sentences.filter { it.end <= startSec || it.start >= endSec }.toMutableList()
                 baseFiltered.addAll(newSentences)
                 baseFiltered.sortBy { it.start }
@@ -375,6 +379,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 }.map { it.await() }
 
                 // 合并最终结果：保留范围外的句子 + 替换范围内的为 enriched
+                if (enriched.isEmpty()) {
+                    _retranscribeProgress.value = null; return@launch
+                }
                 val finalBase = _task.value?.sentences?.filter { it.end <= startSec || it.start >= endSec }?.toMutableList() ?: return@launch
                 finalBase.addAll(enriched)
                 finalBase.sortBy { it.start }
