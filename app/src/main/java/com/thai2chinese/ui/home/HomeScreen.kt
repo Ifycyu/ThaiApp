@@ -41,6 +41,16 @@ fun HomeScreen(
     var renameTaskId by remember { mutableStateOf<String?>(null) }
     var renameTaskName by remember { mutableStateOf("") }
     var menuTaskId by remember { mutableStateOf<String?>(null) }
+
+    // 每次返回首页时刷新列表
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) viewModel.refresh()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val pickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let {
             // 复制到缓存，避免权限问题
