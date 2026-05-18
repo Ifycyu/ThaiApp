@@ -9,9 +9,12 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.google.gson.JsonParser
 import com.thai2chinese.api.DictApiResult
 import com.thai2chinese.api.ThaiWordApi
+import com.thai2chinese.api.WhisperApi
 import com.thai2chinese.api.toSyllable
 import com.thai2chinese.api.toWords
 import com.thai2chinese.api.ThaiWordHeaders
+import com.thai2chinese.audio.AudioExtractor
+import com.thai2chinese.data.Word
 import com.thai2chinese.data.AppConfig
 import com.thai2chinese.data.Sentence
 import com.thai2chinese.data.TaskInfo
@@ -27,6 +30,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
+
+private suspend fun <T> retry(times: Int, block: suspend () -> T): T? {
+    repeat(times) { try { return block() } catch (_: Exception) { delay(1000L * (it + 1)) } }
+    return try { block() } catch (_: Exception) { null }
+}
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
     private val store = TaskStore(application)
@@ -301,6 +309,84 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (textChanged) {
             enrichingSentences.remove(idx)
             tryEnrichSentence(idx)
+        }
+    }
+
+    // 重新识别时间范围
+    private val _retranscribeProgress = MutableStateFlow<String?>(null)
+    val retranscribeProgress: StateFlow<String?> = _retranscribeProgress
+
+    fun retranscribeRange(startSec: Double, endSec: Double) {
+        if (_retranscribeProgress.value != null) return
+        val currentTask = _task.value ?: return
+        val videoUri = currentTask.videoUri
+        val twUrl = config.thaiwordUrl; val headers = twHeaders()
+
+        viewModelScope.launch {
+            _retranscribeProgress.value = "提取音频..."
+            try {
+                val audioFile = withContext(Dispatchers.IO) {
+                    AudioExtractor.extractAudioRange(context, videoUri, startSec, endSec)
+                }
+
+                _retranscribeProgress.value = "Whisper 识别中..."
+                val whisperResult = withContext(Dispatchers.IO) {
+                    WhisperApi.transcribe(audioFile, config.whisperBaseUrl, config.whisperApiKey)
+                }
+                audioFile.delete()
+
+                // 将 Whisper 结果转为 Sentence，时间戳加上偏移
+                val newSentences = whisperResult.segments.map { seg ->
+                    val words = if (seg.words.isNotEmpty()) {
+                        seg.words.map { Word(text = it.word.trim(), start = it.start + startSec, end = it.end + startSec) }
+                    } else {
+                        val dur = seg.end - seg.start
+                        val tokens = seg.text.trim().split("\\s+".toRegex())
+                        val wordDur = if (tokens.isNotEmpty()) dur / tokens.size else dur
+                        tokens.mapIndexed { i, t -> Word(text = t, start = startSec + seg.start + i * wordDur, end = startSec + seg.start + (i + 1) * wordDur) }
+                    }
+                    Sentence(text = seg.text.trim(), start = seg.start + startSec, end = seg.end + startSec, words = words)
+                }
+
+                // 先展示未分析的结果
+                val taskNow = _task.value ?: return@launch
+                val baseFiltered = taskNow.sentences.filter { it.end <= startSec || it.start >= endSec }.toMutableList()
+                baseFiltered.addAll(newSentences)
+                baseFiltered.sortBy { it.start }
+                _task.value = taskNow.copy(sentences = baseFiltered)
+
+                // 分析新句子（分词+翻译）
+                _retranscribeProgress.value = "分词分析中..."
+                val semaphore = Semaphore(3)
+                val enriched = newSentences.map { s ->
+                    async(Dispatchers.IO) {
+                        semaphore.acquire()
+                        try {
+                            val analyzed = retry(2) {
+                                val r = ThaiWordApi.analyze(s.text, twUrl, headers)
+                                if (r.words.isNotEmpty()) s.copy(words = r.words.toWords(s.start, s.end)) else s
+                            } ?: s
+                            val translation = if (analyzed.translation.isBlank()) {
+                                retry(2) { ThaiWordApi.translate(s.text, twUrl, headers).translated } ?: ""
+                            } else analyzed.translation
+                            if (translation.isNotBlank()) analyzed.copy(translation = translation) else analyzed
+                        } finally { semaphore.release() }
+                    }
+                }.map { it.await() }
+
+                // 合并最终结果：保留范围外的句子 + 替换范围内的为 enriched
+                val finalBase = _task.value?.sentences?.filter { it.end <= startSec || it.start >= endSec }?.toMutableList() ?: return@launch
+                finalBase.addAll(enriched)
+                finalBase.sortBy { it.start }
+                val finalTask = taskNow.copy(sentences = finalBase)
+                _task.value = finalTask; store.put(finalTask)
+
+                _retranscribeProgress.value = null
+            } catch (e: Exception) {
+                Log.w("PlayerVM", "retranscribeRange failed", e)
+                _retranscribeProgress.value = "失败: ${e.message}"
+                delay(3000); _retranscribeProgress.value = null
+            }
         }
     }
 

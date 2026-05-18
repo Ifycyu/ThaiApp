@@ -43,6 +43,7 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     val learnResult by viewModel.learnResult.collectAsState()
     val isLearning by viewModel.isLearning.collectAsState()
     val batchProgress by viewModel.batchProgress.collectAsState()
+    val retranscribeProgress by viewModel.retranscribeProgress.collectAsState()
     val currentPosition by viewModel.currentPosition.collectAsState()
     val duration by viewModel.duration.collectAsState()
     val isPlaying by remember { derivedStateOf { viewModel.player.isPlaying } }
@@ -52,6 +53,8 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     var showEditDialog by remember { mutableStateOf(false) }
     var editSentence by remember { mutableStateOf<com.thai2chinese.data.Sentence?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showRetranscribeDialog by remember { mutableStateOf(false) }
+    var retranscribeSentence by remember { mutableStateOf<com.thai2chinese.data.Sentence?>(null) }
 
     LaunchedEffect(taskId) { viewModel.loadTask(taskId) }
 
@@ -82,7 +85,13 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
             showEditDialog = true
             viewModel.dismissSentenceMenu()
         },
-        onLearn = { viewModel.learnSentence() }
+        onLearn = { viewModel.learnSentence() },
+        onRetranscribe = {
+            val captured = menuSentence
+            retranscribeSentence = captured
+            showRetranscribeDialog = true
+            viewModel.dismissSentenceMenu()
+        }
     )
 
     // 编辑对话框
@@ -98,6 +107,18 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     if (showEditDialog && editSentence != null) {
         EditSentenceDialog(sentence = editSentence, onDismiss = { showEditDialog = false },
             onSave = { text, translation -> viewModel.editSentence(text, translation); showEditDialog = false })
+    }
+
+    if (showRetranscribeDialog && retranscribeSentence != null) {
+        RetranscribeDialog(
+            sentence = retranscribeSentence!!,
+            duration = duration / 1000f,
+            onDismiss = { showRetranscribeDialog = false },
+            onConfirm = { startSec, endSec ->
+                showRetranscribeDialog = false
+                viewModel.retranscribeRange(startSec.toDouble(), endSec.toDouble())
+            }
+        )
     }
 
     if (task == null) {
@@ -128,7 +149,9 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
                 IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = TextPrimary) }
                 Text(currentTask.filename, color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, modifier = Modifier.weight(1f))
-                if (batchProgress != null) {
+                if (retranscribeProgress != null) {
+                    Text(retranscribeProgress!!, color = AccentBlue, fontSize = 13.sp, modifier = Modifier.padding(end = 8.dp))
+                } else if (batchProgress != null) {
                     Text(batchProgress!!, color = AccentBlue, fontSize = 13.sp, modifier = Modifier.padding(end = 8.dp))
                 } else if (currentTask.sentences.any { it.translation.isBlank() || (it.words.isNotEmpty() && it.words.first().ipa.isBlank()) }) {
                     TextButton(onClick = { viewModel.enrichAllPending() }) {
@@ -305,4 +328,49 @@ fun RichText(text: String, fontSize: TextUnit, color: Color) {
             }
         }
     }, color = color, fontSize = fontSize, lineHeight = (fontSize.value * 1.5).sp)
+}
+
+@Composable
+fun RetranscribeDialog(sentence: com.thai2chinese.data.Sentence, duration: Float, onDismiss: () -> Unit, onConfirm: (Float, Float) -> Unit) {
+    val totalSec = if (duration > 0) duration else sentence.end.toFloat()
+    var startSec by remember { mutableFloatStateOf(sentence.start.toFloat()) }
+    var endSec by remember { mutableFloatStateOf(sentence.end.toFloat()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DarkCard,
+        title = { Text("重新识别", color = TextPrimary, fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                Text(sentence.text, color = AccentBlue, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("开始时间: ${formatTime(startSec.toDouble())}", color = TextSecondary, fontSize = 14.sp)
+                Slider(
+                    value = startSec,
+                    onValueChange = { if (it < endSec - 0.5f) startSec = it },
+                    valueRange = 0f..totalSec,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(thumbColor = AccentBlue, activeTrackColor = AccentBlue, inactiveTrackColor = DarkSurface)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text("结束时间: ${formatTime(endSec.toDouble())}", color = TextSecondary, fontSize = 14.sp)
+                Slider(
+                    value = endSec,
+                    onValueChange = { if (it > startSec + 0.5f) endSec = it },
+                    valueRange = 0f..totalSec,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(thumbColor = AccentBlue, activeTrackColor = AccentBlue, inactiveTrackColor = DarkSurface)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("范围: ${formatTime(startSec.toDouble())} - ${formatTime(endSec.toDouble())}（${String.format("%.1f", endSec - startSec)}秒）",
+                    color = TextMuted, fontSize = 13.sp)
+            }
+        },
+        confirmButton = { TextButton(onClick = { onConfirm(startSec, endSec) }) { Text("开始识别", color = AccentBlue) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消", color = TextMuted) } }
+    )
 }

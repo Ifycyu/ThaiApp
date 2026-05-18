@@ -96,7 +96,8 @@ fun SentenceMenuSheet(
     onRetranslate: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onLearn: () -> Unit
+    onLearn: () -> Unit,
+    onRetranscribe: () -> Unit
 ) {
     if (sentence == null) return
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = DarkCard, contentColor = TextPrimary) {
@@ -111,6 +112,7 @@ fun SentenceMenuSheet(
             MenuAction("复制泰语") { onCopy() }
             MenuAction("复制双语字幕") { onCopyBilingual() }
             MenuAction("重新翻译") { onRetranslate() }
+            MenuAction("重新识别") { onRetranscribe() }
             MenuAction("句子分析") { onLearn() }
             MenuAction("编辑字幕") { onEdit() }
             MenuAction("删除句子", color = ToneLow) { onDelete() }
