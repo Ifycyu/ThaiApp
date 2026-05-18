@@ -3,6 +3,7 @@ package com.thai2chinese.audio
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
+import android.util.Log
 import com.thai2chinese.api.ThaiWordApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -11,6 +12,7 @@ import java.security.MessageDigest
 
 object TtsPlayer {
     private var mediaPlayer: MediaPlayer? = null
+    private val client = okhttp3.OkHttpClient()
 
     private fun getCacheFile(context: Context, word: String): File {
         val dir = File(context.cacheDir, "tts_cache"); dir.mkdirs()
@@ -24,7 +26,6 @@ object TtsPlayer {
                 val cacheFile = getCacheFile(context, word)
                 if (!cacheFile.exists()) {
                     val url = ThaiWordApi.ttsUrl(word, thaiwordUrl)
-                    val client = okhttp3.OkHttpClient()
                     val request = okhttp3.Request.Builder().url(url).build()
                     val response = client.newCall(request).execute()
                     if (response.isSuccessful) {
@@ -48,17 +49,17 @@ object TtsPlayer {
                                 start()
                                 setOnCompletionListener { release() }
                             }
-                        } catch (_: Exception) {}
+                        } catch (e: Exception) { Log.w("TtsPlayer", "play failed", e) }
                     }
                 }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("TtsPlayer", "play error", e) }
     }
 
     fun stop() {
         try {
             mediaPlayer?.let { if (it.isPlaying) it.stop(); it.release() }
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("TtsPlayer", "stop error", e) }
         mediaPlayer = null
     }
 }

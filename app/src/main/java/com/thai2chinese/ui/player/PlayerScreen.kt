@@ -38,6 +38,7 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     val menuSentence by viewModel.menuSentence.collectAsState()
     val learnResult by viewModel.learnResult.collectAsState()
     val isLearning by viewModel.isLearning.collectAsState()
+    val batchProgress by viewModel.batchProgress.collectAsState()
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val clipboardManager = LocalClipboardManager.current
@@ -115,6 +116,13 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
                 IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = TextPrimary) }
                 Text(currentTask.filename, color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, modifier = Modifier.weight(1f))
+                if (batchProgress != null) {
+                    Text(batchProgress!!, color = AccentBlue, fontSize = 13.sp, modifier = Modifier.padding(end = 8.dp))
+                } else if (currentTask.sentences.any { it.translation.isBlank() || (it.words.isNotEmpty() && it.words.first().ipa.isBlank()) }) {
+                    TextButton(onClick = { viewModel.enrichAllPending() }) {
+                        Text("分析全部", color = AccentBlue, fontSize = 13.sp)
+                    }
+                }
             }
             Box(modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)) { VideoPlayerView(viewModel.player, Modifier.fillMaxSize()) }
             SentenceList(currentTask.sentences, activeSentence, activeWord,

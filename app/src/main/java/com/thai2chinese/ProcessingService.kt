@@ -8,14 +8,14 @@ import androidx.core.app.NotificationCompat
 import com.thai2chinese.api.ThaiWordApi
 import com.thai2chinese.api.ThaiWordHeaders
 import com.thai2chinese.api.WhisperApi
+import com.thai2chinese.api.toWords
 import com.thai2chinese.audio.AudioExtractor
 import com.thai2chinese.data.AppConfig
 import com.thai2chinese.data.Sentence
-import com.thai2chinese.data.Syllable
 import com.thai2chinese.data.TaskInfo
 import com.thai2chinese.data.TaskStore
-import com.thai2chinese.data.ToneInfo
 import com.thai2chinese.data.Word
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.async
@@ -46,7 +46,7 @@ class ProcessingService : Service() {
         var resultTaskId: String? = null; private set
         var error: String? = null; private set
 
-        private val listeners = mutableListOf<() -> Unit>()
+        private val listeners = CopyOnWriteArrayList<() -> Unit>()
         fun addListener(l: () -> Unit) { listeners.add(l) }
         fun removeListener(l: () -> Unit) { listeners.remove(l) }
         private fun notifyListeners() { listeners.forEach { it() } }
@@ -103,11 +103,7 @@ class ProcessingService : Service() {
                             val enriched = retry(2) {
                                 val result = ThaiWordApi.analyze(sentence.text, twUrl, headers)
                                 if (result.words.isNotEmpty()) {
-                                    val duration = sentence.end - sentence.start; val wordDuration = if (result.words.size > 0) duration / result.words.size else duration
-                                    val enrichedWords = result.words.mapIndexed { i, aw -> Word(text = aw.word, roman = aw.ipa, start = sentence.start + i * wordDuration, end = sentence.start + (i + 1) * wordDuration,
-                                        ipa = aw.ipa, meaning = aw.chinese, word_class = aw.word_class,
-                                        syllables = aw.syllables.map { s -> Syllable(syllable = s.syllable, text = s.text, ipa = s.ipa, consonant = s.consonant, consonant_class = s.consonant_class, vowel = s.vowel, vowel_length = s.vowel_length, tone_mark = s.tone_mark, final_consonant = s.final_consonant, final_type = s.final_type, tone = s.tone?.let { ToneInfo(it.tone, it.tone_cn, it.tone_number, it.explanation) }, explanation = s.explanation, pronunciation_tip = s.pronunciation_tip) }) }
-                                    sentence.copy(words = enrichedWords)
+                                    sentence.copy(words = result.words.toWords(sentence.start, sentence.end))
                                 } else sentence
                             } ?: sentence
 

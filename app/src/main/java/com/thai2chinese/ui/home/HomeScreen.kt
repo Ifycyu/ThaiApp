@@ -44,7 +44,8 @@ fun HomeScreen(
                     cacheFile.outputStream().use { output -> input.copyTo(output) }
                 }
                 onNavigateToProcessing("file://${cacheFile.absolutePath}", "video.mp4")
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                e.printStackTrace()
                 onNavigateToProcessing(it.toString(), "video.mp4")
             }
         }

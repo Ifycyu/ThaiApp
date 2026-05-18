@@ -1,6 +1,7 @@
 package com.thai2chinese.ui.player
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
@@ -8,15 +9,15 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.google.gson.JsonParser
 import com.thai2chinese.api.DictApiResult
 import com.thai2chinese.api.ThaiWordApi
+import com.thai2chinese.api.toSyllable
+import com.thai2chinese.api.toWords
 import com.thai2chinese.api.ThaiWordHeaders
 import com.thai2chinese.data.AppConfig
 import com.thai2chinese.data.Sentence
-import com.thai2chinese.data.Syllable
 import com.thai2chinese.data.TaskInfo
 import com.thai2chinese.data.TaskStore
-import com.thai2chinese.data.ToneInfo
-import com.thai2chinese.data.Word
 import com.thai2chinese.data.WordDetail
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.async
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -24,6 +25,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
@@ -46,7 +48,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val selectedDictResult: StateFlow<DictApiResult?> = _selectedDictResult
 
     private var syncJob: Job? = null
-    private val enrichingSentences = mutableSetOf<Int>()
+    private val enrichingSentences = ConcurrentHashMap.newKeySet<Int>()
 
     private fun twHeaders() = ThaiWordHeaders(
         dictApi = config.dictApiUrl,
@@ -89,7 +91,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                         tryEnrichSentence(foundSent)
                     }
                 }
-                delay(80)
+                delay(if (player.isPlaying) 80 else 500)
             }
         }
     }
@@ -105,13 +107,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 val sentence = currentTask.sentences[index]
                 val result = withContext(Dispatchers.IO) { ThaiWordApi.analyze(sentence.text, twUrl, headers) }
                 val enrichedWords = if (result.words.isNotEmpty()) {
-                    val duration = sentence.end - sentence.start
-                    val wordDuration = if (result.words.size > 0) duration / result.words.size else duration
-                    result.words.mapIndexed { i, aw ->
-                        Word(text = aw.word, roman = aw.ipa, start = sentence.start + i * wordDuration, end = sentence.start + (i + 1) * wordDuration,
-                            ipa = aw.ipa, meaning = aw.chinese, word_class = aw.word_class,
-                            syllables = aw.syllables.map { s -> Syllable(syllable = s.syllable, text = s.text, ipa = s.ipa, consonant = s.consonant, consonant_class = s.consonant_class, vowel = s.vowel, vowel_length = s.vowel_length, tone_mark = s.tone_mark, final_consonant = s.final_consonant, final_type = s.final_type, tone = s.tone?.let { ToneInfo(it.tone, it.tone_cn, it.tone_number, it.explanation) }, explanation = s.explanation, pronunciation_tip = s.pronunciation_tip) })
-                    }
+                    result.words.toWords(sentence.start, sentence.end)
                 } else sentence.words
 
                 val translation = if (sentence.translation.isBlank()) {
@@ -122,7 +118,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 updatedSentences[index] = sentence.copy(words = enrichedWords, translation = translation)
                 val updatedTask = currentTask.copy(sentences = updatedSentences)
                 _task.value = updatedTask; store.put(updatedTask)
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w("PlayerVM", "enrichSentence failed", e) }
         }
     }
 
@@ -145,7 +141,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             val twResult = twDeferred.await()
             if (twResult != null) {
                 _selectedWord.value = WordDetail(word = twResult.word, ipa = twResult.ipa, meaning = twResult.chinese, word_class = twResult.word_class,
-                    syllables = twResult.syllables.map { s -> Syllable(syllable = s.syllable, text = s.text, ipa = s.ipa, consonant = s.consonant, consonant_class = s.consonant_class, vowel = s.vowel, vowel_length = s.vowel_length, tone_mark = s.tone_mark, final_consonant = s.final_consonant, final_type = s.final_type, tone = s.tone?.let { ToneInfo(it.tone, it.tone_cn, it.tone_number, it.explanation) }, explanation = s.explanation, pronunciation_tip = s.pronunciation_tip) },
+                    syllables = twResult.syllables.map { it.toSyllable() },
                     examples = twResult.examples)
             } else {
                 _selectedWord.value = WordDetail(word = word, meaning = "查询失败")
@@ -193,7 +189,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 updated[idx] = sentence.copy(translation = translated)
                 val newTask = currentTask.copy(sentences = updated)
                 _task.value = newTask; store.put(newTask)
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w("PlayerVM", "retranslate failed", e) }
         }
     }
 
@@ -224,6 +220,50 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun dismissLearn() { _learnResult.value = null }
+
+    // 一键分析所有未分析的句子
+    private val _batchProgress = MutableStateFlow<String?>(null)
+    val batchProgress: StateFlow<String?> = _batchProgress
+    private var batchJob: Job? = null
+
+    fun enrichAllPending() {
+        if (batchJob != null) return
+        val currentTask = _task.value ?: return
+        val pending = currentTask.sentences.mapIndexedNotNull { idx, s ->
+            if (s.translation.isBlank() || (s.words.isNotEmpty() && s.words.first().ipa.isBlank())) idx else null
+        }
+        if (pending.isEmpty()) return
+
+        batchJob = viewModelScope.launch {
+            _batchProgress.value = "0/${pending.size}"
+            val semaphore = Semaphore(3)
+            var done = 0
+            pending.chunked(5).forEach { chunk ->
+                chunk.map { idx ->
+                    async(Dispatchers.IO) {
+                        semaphore.acquire()
+                        try {
+                            val twUrl = config.thaiwordUrl; val headers = twHeaders()
+                            val current = _task.value?.sentences?.get(idx) ?: return@async
+                            val result = ThaiWordApi.analyze(current.text, twUrl, headers)
+                            val enrichedWords = if (result.words.isNotEmpty()) {
+                                result.words.toWords(current.start, current.end)
+                            } else current.words
+                            val translation = if (current.translation.isBlank()) {
+                                try { ThaiWordApi.translate(current.text, twUrl, headers).translated } catch (_: Exception) { "" }
+                            } else current.translation
+                            val task = _task.value ?: return@async
+                            val updated = task.sentences.toMutableList()
+                            updated[idx] = current.copy(words = enrichedWords, translation = translation)
+                            _task.value = task.copy(sentences = updated); store.putWithoutSave(task.copy(sentences = updated))
+                        } catch (e: Exception) { Log.w("PlayerVM", "batchEnrich failed", e) } finally { semaphore.release(); done++; _batchProgress.value = "$done/${pending.size}" }
+                    }
+                }.forEach { it.await() }
+                store.saveNow()
+            }
+            _batchProgress.value = null; batchJob = null
+        }
+    }
 
     fun deleteSentence() {
         val idx = menuSentenceIndex

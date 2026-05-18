@@ -120,8 +120,7 @@ fun SentenceMenuSheet(
                     Text(sentence.translation, color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp))
                 }
             }
-            @Suppress("DEPRECATION")
-            Divider(color = DarkSurface, modifier = Modifier.padding(vertical = 4.dp))
+            HorizontalDivider(color = DarkSurface, modifier = Modifier.padding(vertical = 4.dp))
             MenuAction("复制泰语") { onCopy() }
             MenuAction("复制双语字幕") { onCopyBilingual() }
             MenuAction("重新翻译") { onRetranslate() }

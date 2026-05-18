@@ -5,6 +5,7 @@ import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.net.Uri
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.ByteBuffer
@@ -55,7 +56,7 @@ object AudioExtractor {
         codec.configure(audioFormat, null, null, 0)
         codec.start()
 
-        val pcmData = mutableListOf<Byte>()
+        val pcmData = ByteArrayOutputStream()
         val bufferInfo = MediaCodec.BufferInfo()
         var inputDone = false
         var outputDone = false
@@ -80,7 +81,7 @@ object AudioExtractor {
                 val outputBuffer = codec.getOutputBuffer(outputIndex)!!
                 val chunk = ByteArray(bufferInfo.size)
                 outputBuffer.get(chunk)
-                pcmData.addAll(chunk.toList())
+                pcmData.write(chunk)
                 codec.releaseOutputBuffer(outputIndex, false)
                 if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) outputDone = true
             }
@@ -106,7 +107,7 @@ object AudioExtractor {
                     file.delete()
                 }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) { e.printStackTrace() }
     }
 
     private fun writeWav(file: File, pcmData: ByteArray, sampleRate: Int, channels: Int) {

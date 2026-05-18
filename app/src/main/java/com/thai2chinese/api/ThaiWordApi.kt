@@ -91,7 +91,7 @@ object ThaiWordApi {
                 thesaurus = item["thesaurus"]?.toString() ?: "",
                 examp = (item["examp"] as? List<*>)?.mapNotNull { it?.toString() } ?: emptyList()
             )
-        } catch (_: Exception) { return null }
+        } catch (e: Exception) { e.printStackTrace(); return null }
     }
 }
 

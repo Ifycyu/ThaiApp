@@ -20,5 +20,9 @@ class TaskStore(context: Context) {
     fun getAll(): List<TaskInfo> = tasks.values.sortedByDescending { it.id }
     fun get(id: String): TaskInfo? = tasks[id]
     fun put(task: TaskInfo) { tasks[task.id] = task; save() }
+
+    fun putWithoutSave(task: TaskInfo) { tasks[task.id] = task }
+
+    fun saveNow() { save() }
     fun delete(id: String) { tasks.remove(id); save() }
 }
