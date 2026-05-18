@@ -3,6 +3,7 @@ package com.thai2chinese.ui.player
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -45,7 +46,7 @@ fun SentenceList(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun SentenceItem(sentence: Sentence, isActive: Boolean, activeWord: Int,
     onWordClick: (String, String) -> Unit, onSentenceClick: () -> Unit, onLongClick: () -> Unit) {
@@ -57,7 +58,7 @@ fun SentenceItem(sentence: Sentence, isActive: Boolean, activeWord: Int,
 
         // Romanization + Thai words (per-word stacked)
         if (sentence.words.isNotEmpty()) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 sentence.words.forEachIndexed { wordIdx, word ->
                     val ipa = when { word.ipa.isNotBlank() -> word.ipa; word.roman.isNotBlank() -> word.roman; else -> word.text }
                     val isActive = wordIdx == activeWord
