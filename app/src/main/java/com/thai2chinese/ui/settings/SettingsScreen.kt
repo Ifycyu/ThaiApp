@@ -23,6 +23,7 @@ import com.thai2chinese.ui.theme.*
 
 @Composable
 fun SettingsScreen(onBack: () -> Unit, config: AppConfig) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var whisperKey by remember { mutableStateOf(config.whisperApiKey) }
     var whisperUrl by remember { mutableStateOf(config.whisperBaseUrl) }
     var thaiwordUrl by remember { mutableStateOf(config.thaiwordUrl) }
@@ -34,6 +35,7 @@ fun SettingsScreen(onBack: () -> Unit, config: AppConfig) {
     var showKey by remember { mutableStateOf(false) }
     var showToken by remember { mutableStateOf(false) }
     var saved by remember { mutableStateOf(false) }
+    var cleanedSize by remember { mutableStateOf<String?>(null) }
 
     Column(modifier = Modifier.fillMaxSize().background(DarkBg).verticalScroll(rememberScrollState()).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -93,6 +95,34 @@ fun SettingsScreen(onBack: () -> Unit, config: AppConfig) {
             Text("保存", fontSize = 16.sp, modifier = Modifier.padding(vertical = 4.dp))
         }
         if (saved) { Spacer(modifier = Modifier.height(8.dp)); Text("已保存", color = AccentBlue, fontSize = 14.sp) }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 清理临时文件
+        OutlinedButton(
+            onClick = {
+                val ctx = context
+                val cacheDir = ctx.cacheDir
+                var totalSize = 0L
+                var count = 0
+                cacheDir.listFiles()?.forEach { file ->
+                    if (file.name.startsWith("temp_video_") || (file.name.startsWith("audio_") && file.extension == "wav")) {
+                        totalSize += file.length()
+                        file.delete()
+                        count++
+                    }
+                }
+                cleanedSize = if (count > 0) "已清理 $count 个文件，释放 ${totalSize / 1024 / 1024}MB" else "没有临时文件"
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text("清理临时文件", color = TextPrimary)
+        }
+        if (cleanedSize != null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(cleanedSize!!, color = AccentBlue, fontSize = 13.sp)
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
         Card(colors = CardDefaults.cardColors(containerColor = DarkCard), shape = RoundedCornerShape(8.dp)) {
