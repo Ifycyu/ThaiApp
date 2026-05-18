@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -143,7 +144,7 @@ fun HomeScreen(
                     value = renameTaskName,
                     onValueChange = { renameTaskName = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = Text("文件名", color = TextSecondary),
+                    label = { Text("文件名", color = TextSecondary) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary,
                         focusedBorderColor = AccentBlue, unfocusedBorderColor = DarkCard, cursorColor = AccentBlue
