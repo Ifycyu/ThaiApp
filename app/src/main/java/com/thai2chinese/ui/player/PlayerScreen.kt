@@ -61,6 +61,11 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
 
     LaunchedEffect(taskId) { viewModel.loadTask(taskId) }
 
+    // 离开页面时暂停播放
+    DisposableEffect(Unit) {
+        onDispose { viewModel.player.pause() }
+    }
+
     // 词卡
     WordCardSheet(wordDetail = selectedWord, dictResult = selectedDictResult, isLoading = isLoadingWord, onDismiss = { viewModel.dismissWordCard() })
 
