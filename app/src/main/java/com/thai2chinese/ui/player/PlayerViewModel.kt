@@ -47,6 +47,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val _selectedDictResult = MutableStateFlow<DictApiResult?>(null)
     val selectedDictResult: StateFlow<DictApiResult?> = _selectedDictResult
 
+    private val _currentPosition = MutableStateFlow(0f)
+    val currentPosition: StateFlow<Float> = _currentPosition
+    private val _duration = MutableStateFlow(0f)
+    val duration: StateFlow<Float> = _duration
+
     private var syncJob: Job? = null
     private val enrichingSentences = ConcurrentHashMap.newKeySet<Int>()
 
@@ -72,6 +77,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         syncJob = viewModelScope.launch {
             while (true) {
                 val pos = player.currentPosition / 1000.0
+                _currentPosition.value = player.currentPosition.toFloat()
+                _duration.value = if (player.duration > 0) player.duration.toFloat() else 0f
                 val sentences = _task.value?.sentences ?: emptyList()
                 var foundSent = -1; var foundWord = -1
                 for (i in sentences.indices) {
@@ -157,6 +164,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun dismissWordCard() { _selectedWord.value = null; _selectedDictResult.value = null }
     fun seekTo(time: Double) { player.seekTo((time * 1000).toLong()) }
+    fun seekToMs(ms: Float) { player.seekTo(ms.toLong()) }
+    fun togglePlayPause() { if (player.isPlaying) player.pause() else player.play() }
 
     // 长按句子菜单
     private val _menuSentence = MutableStateFlow<Sentence?>(null)

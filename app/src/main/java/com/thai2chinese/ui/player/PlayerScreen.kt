@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.Player
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.PlayerView
 import com.thai2chinese.ui.theme.*
@@ -39,6 +41,9 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     val learnResult by viewModel.learnResult.collectAsState()
     val isLearning by viewModel.isLearning.collectAsState()
     val batchProgress by viewModel.batchProgress.collectAsState()
+    val currentPosition by viewModel.currentPosition.collectAsState()
+    val duration by viewModel.duration.collectAsState()
+    val isPlaying by remember { derivedStateOf { viewModel.player.isPlaying } }
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val clipboardManager = LocalClipboardManager.current
@@ -101,15 +106,20 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     val currentTask = task!!
 
     if (isLandscape) {
-        Row(modifier = Modifier.fillMaxSize().background(DarkBg)) {
-            Box(modifier = Modifier.weight(1f).fillMaxHeight()) { VideoPlayerView(viewModel.player, Modifier.fillMaxSize()) }
-            Column(modifier = Modifier.weight(1f).fillMaxHeight().background(DarkSurface)) {
-                SentenceList(currentTask.sentences, activeSentence, activeWord,
-                    onWordClick = { w, c -> viewModel.onWordClick(w, c) },
-                    onSentenceClick = { viewModel.seekTo(it) },
-                    onSentenceLongClick = { idx, sent -> viewModel.showSentenceMenu(idx, sent) },
-                    modifier = Modifier.weight(1f))
+        Column(modifier = Modifier.fillMaxSize().background(DarkBg)) {
+            Row(modifier = Modifier.weight(1f)) {
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) { VideoPlayerView(viewModel.player, Modifier.fillMaxSize()) }
+                Column(modifier = Modifier.weight(1f).fillMaxHeight().background(DarkSurface)) {
+                    SentenceList(currentTask.sentences, activeSentence, activeWord,
+                        onWordClick = { w, c -> viewModel.onWordClick(w, c) },
+                        onSentenceClick = { viewModel.seekTo(it) },
+                        onSentenceLongClick = { idx, sent -> viewModel.showSentenceMenu(idx, sent) },
+                        modifier = Modifier.weight(1f))
+                }
             }
+            PlayerProgressBar(currentPosition, duration, isPlaying,
+                onSeek = { viewModel.seekToMs(it) },
+                onPlayPause = { viewModel.togglePlayPause() })
         }
     } else {
         Column(modifier = Modifier.fillMaxSize().background(DarkBg)) {
@@ -130,6 +140,9 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
                 onSentenceClick = { viewModel.seekTo(it) },
                 onSentenceLongClick = { idx, sent -> viewModel.showSentenceMenu(idx, sent) },
                 modifier = Modifier.weight(1f))
+            PlayerProgressBar(currentPosition, duration, isPlaying,
+                onSeek = { viewModel.seekToMs(it) },
+                onPlayPause = { viewModel.togglePlayPause() })
         }
     }
 }
@@ -137,7 +150,59 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
 @Composable
 fun VideoPlayerView(player: androidx.media3.common.Player, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    AndroidView(factory = { PlayerView(context).apply { this.player = player; useController = true } }, modifier = modifier)
+    AndroidView(factory = {
+        PlayerView(context).apply {
+            this.player = player
+            useController = false
+            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+        }
+    }, modifier = modifier)
+}
+
+@Composable
+fun PlayerProgressBar(
+    currentPosition: Float, duration: Float, isPlaying: Boolean,
+    onSeek: (Float) -> Unit, onPlayPause: () -> Unit
+) {
+    val totalSec = duration / 1000f
+    val curSec = currentPosition / 1000f
+    var isDragging by remember { mutableStateOf(false) }
+    var dragValue by remember { mutableStateOf(0f) }
+    val displayValue = if (isDragging) dragValue else curSec
+
+    fun formatTime(ms: Float): String {
+        val total = (ms / 1000).toInt()
+        val m = total / 60; val s = total % 60
+        return "%d:%02d".format(m, s)
+    }
+
+    Column(modifier = Modifier.fillMaxWidth().background(DarkCard).padding(horizontal = 12.dp, vertical = 4.dp)) {
+        Slider(
+            value = displayValue,
+            onValueChange = { isDragging = true; dragValue = it },
+            onValueChangeFinished = { isDragging = false; onSeek(dragValue * 1000f) },
+            valueRange = 0f..(if (totalSec > 0) totalSec else 1f),
+            modifier = Modifier.fillMaxWidth().height(24.dp),
+            colors = SliderDefaults.colors(
+                thumbColor = AccentBlue,
+                activeTrackColor = AccentBlue,
+                inactiveTrackColor = DarkSurface
+            )
+        )
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(formatTime(currentPosition), color = TextMuted, fontSize = 12.sp)
+            Spacer(modifier = Modifier.weight(1f))
+            IconButton(onClick = onPlayPause, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaying) "暂停" else "播放",
+                    tint = TextPrimary, modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            Text(formatTime(duration), color = TextMuted, fontSize = 12.sp)
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
