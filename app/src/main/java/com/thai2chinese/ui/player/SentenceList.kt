@@ -20,7 +20,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.thai2chinese.data.Sentence
-import com.thai2chinese.data.Word
 import com.thai2chinese.ui.theme.*
 
 @Composable
@@ -55,23 +54,22 @@ fun SentenceItem(sentence: Sentence, isActive: Boolean, activeWord: Int,
         .combinedClickable(onClick = onSentenceClick, onLongClick = onLongClick)
         .padding(horizontal = 16.dp, vertical = 12.dp)) {
 
-        // Row 1 + Row 2: Romanization + Thai words (per-word aligned)
+        // Romanization + Thai words (per-word stacked)
         if (sentence.words.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                // Romanization row
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    sentence.words.forEach { w ->
-                        val ipa = when { w.ipa.isNotBlank() -> w.ipa; w.roman.isNotBlank() -> w.roman; else -> w.text }
-                        Text(ipa, color = TextMuted, fontSize = 13.sp, lineHeight = 16.sp,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.weight(1f).padding(horizontal = 6.dp))
-                    }
-                }
-                // Thai words row
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    sentence.words.forEachIndexed { wordIdx, word ->
-                        ThaiWordChip(word = word, isActive = wordIdx == activeWord,
-                            onClick = { onWordClick(word.text, sentence.text) })
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                sentence.words.forEachIndexed { wordIdx, word ->
+                    val ipa = when { word.ipa.isNotBlank() -> word.ipa; word.roman.isNotBlank() -> word.roman; else -> word.text }
+                    val isActive = wordIdx == activeWord
+                    Column(horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                            .background(if (isActive) ActiveGreen else Color.Transparent)
+                            .clickable { onWordClick(word.text, sentence.text) }
+                            .padding(horizontal = 6.dp, vertical = 4.dp)) {
+                        Text(ipa, color = TextMuted, fontSize = 13.sp, lineHeight = 16.sp, textAlign = TextAlign.Center)
+                        Text(word.text, color = if (isActive) Color.White else TextPrimary,
+                            fontSize = if (isActive) 20.sp else 18.sp,
+                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                            textAlign = TextAlign.Center, maxLines = 1)
                     }
                 }
             }
@@ -85,22 +83,6 @@ fun SentenceItem(sentence: Sentence, isActive: Boolean, activeWord: Int,
             Text(sentence.translation, color = TextSecondary, fontSize = 14.sp, lineHeight = 20.sp,
                 modifier = Modifier.padding(top = 8.dp))
         }
-    }
-}
-
-@Composable
-fun RowScope.ThaiWordChip(word: Word, isActive: Boolean, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.weight(1f)
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (isActive) ActiveGreen else Color.Transparent)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 6.dp, vertical = 4.dp)) {
-        Text(word.text, color = if (isActive) Color.White else TextPrimary,
-            fontSize = if (isActive) 20.sp else 18.sp,
-            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-            textAlign = TextAlign.Center,
-            maxLines = 1)
     }
 }
 
