@@ -336,7 +336,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 audioFile.delete()
 
                 // 将 Whisper 结果转为 Sentence，时间戳加上偏移
-                val newSentences = whisperResult.segments.map { seg ->
+                val newSentences = whisperResult.segments.filter { it.no_speech_prob < 0.5 }.map { seg ->
                     val words = if (seg.words.isNotEmpty()) {
                         seg.words.map { Word(text = it.word.trim(), start = it.start + startSec, end = it.end + startSec) }
                     } else {

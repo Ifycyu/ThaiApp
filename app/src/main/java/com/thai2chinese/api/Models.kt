@@ -1,7 +1,7 @@
 package com.thai2chinese.api
 
 data class WhisperResponse(val segments: List<WhisperSegment> = emptyList())
-data class WhisperSegment(val text: String = "", val start: Double = 0.0, val end: Double = 0.0, val words: List<WhisperWord> = emptyList())
+data class WhisperSegment(val text: String = "", val start: Double = 0.0, val end: Double = 0.0, val words: List<WhisperWord> = emptyList(), val no_speech_prob: Double = 0.0)
 data class WhisperWord(val word: String = "", val start: Double = 0.0, val end: Double = 0.0)
 
 data class AnalyzeResponse(val sentence: String = "", val words: List<AnalyzeWord> = emptyList())

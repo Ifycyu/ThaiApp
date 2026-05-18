@@ -74,7 +74,7 @@ class ProcessingService : Service() {
             updateProgress("Whisper 转写中...", 0.25f)
             val whisperResult = withContext(Dispatchers.IO) { WhisperApi.transcribe(audioFile, config.whisperBaseUrl, config.whisperApiKey) }
 
-            val sentences = whisperResult.segments.map { seg ->
+            val sentences = whisperResult.segments.filter { it.no_speech_prob < 0.5 }.map { seg ->
                 val words = if (seg.words.isNotEmpty()) seg.words.map { Word(text = it.word.trim(), start = it.start, end = it.end) }
                 else {
                     val dur = seg.end - seg.start; val tokens = seg.text.trim().split("\\s+".toRegex())
