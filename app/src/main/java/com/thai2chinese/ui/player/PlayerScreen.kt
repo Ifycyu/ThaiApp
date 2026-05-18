@@ -3,6 +3,9 @@ package com.thai2chinese.ui.player
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -203,13 +206,19 @@ fun PlayerProgressBar(
         return "%d:%02d".format(m, s)
     }
 
-    Column(modifier = Modifier.fillMaxWidth().background(DarkCard).padding(horizontal = 12.dp, vertical = 4.dp)) {
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .padding(start = 4.dp, end = 4.dp, bottom = 4.dp)
+        .shadow(4.dp, RoundedCornerShape(12.dp))
+        .clip(RoundedCornerShape(12.dp))
+        .background(DarkCard)
+        .padding(horizontal = 12.dp, vertical = 8.dp)) {
         Slider(
             value = displayValue,
             onValueChange = { isDragging = true; dragValue = it },
             onValueChangeFinished = { isDragging = false; onSeek(dragValue * 1000f) },
             valueRange = 0f..(if (totalSec > 0) totalSec else 1f),
-            modifier = Modifier.fillMaxWidth().height(24.dp),
+            modifier = Modifier.fillMaxWidth().height(32.dp),
             colors = SliderDefaults.colors(
                 thumbColor = AccentBlue,
                 activeTrackColor = AccentBlue,
@@ -217,17 +226,17 @@ fun PlayerProgressBar(
             )
         )
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(formatTime(currentPosition), color = TextMuted, fontSize = 12.sp)
+            Text(formatTime(displayValue * 1000f), color = if (isDragging) AccentBlue else TextMuted, fontSize = 13.sp)
             Spacer(modifier = Modifier.weight(1f))
-            IconButton(onClick = onPlayPause, modifier = Modifier.size(32.dp)) {
+            IconButton(onClick = onPlayPause, modifier = Modifier.size(36.dp)) {
                 Icon(
                     if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isPlaying) "暂停" else "播放",
-                    tint = TextPrimary, modifier = Modifier.size(20.dp)
+                    tint = TextPrimary, modifier = Modifier.size(22.dp)
                 )
             }
             Spacer(modifier = Modifier.weight(1f))
-            Text(formatTime(duration), color = TextMuted, fontSize = 12.sp)
+            Text(formatTime(duration), color = TextMuted, fontSize = 13.sp)
         }
     }
 }
