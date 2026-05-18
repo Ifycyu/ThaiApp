@@ -37,11 +37,16 @@ fun HomeScreen(
     val context = LocalContext.current
     val pickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let {
-            // 持久化权限，重启后仍可访问
+            // 复制到缓存，避免权限问题
             try {
-                context.contentResolver.takePersistableUriPermission(it, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            } catch (_: Exception) {}
-            onNavigateToProcessing(it.toString(), "video.mp4")
+                val cacheFile = java.io.File(context.cacheDir, "pick_${System.currentTimeMillis()}.mp4")
+                context.contentResolver.openInputStream(it)?.use { input ->
+                    cacheFile.outputStream().use { output -> input.copyTo(output) }
+                }
+                onNavigateToProcessing("file://${cacheFile.absolutePath}", "video.mp4")
+            } catch (_: Exception) {
+                onNavigateToProcessing(it.toString(), "video.mp4")
+            }
         }
     }
 
