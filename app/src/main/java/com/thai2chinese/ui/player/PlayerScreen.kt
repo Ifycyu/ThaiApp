@@ -144,6 +144,7 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
             viewModel.dismissSentenceMenu()
         },
         onLearn = { viewModel.learnSentence() },
+        onReAnalyze = { viewModel.reAnalyzeSentence() },
         onRetranscribe = {
             val captured = menuSentence
             retranscribeSentence = captured

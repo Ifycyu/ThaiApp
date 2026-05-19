@@ -301,6 +301,24 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun reAnalyzeSentence() {
+        val idx = menuSentenceIndex; val sentence = _menuSentence.value ?: return
+        if (idx < 0) return
+        _menuSentence.value = null
+        enrichingSentences.remove(idx)
+
+        viewModelScope.launch {
+            try {
+                val enriched = withContext(Dispatchers.IO) { doEnrichSentence(sentence, config.thaiwordUrl, twHeaders()) }
+                val currentTask = _task.value ?: return@launch
+                val updated = currentTask.sentences.toMutableList()
+                updated[idx] = enriched
+                val newTask = currentTask.copy(sentences = updated)
+                _task.value = newTask; store.put(newTask)
+            } catch (e: Exception) { Log.w("PlayerVM", "reAnalyze failed", e) }
+        }
+    }
+
     // 句子分析
     private val _learnResult = MutableStateFlow<String?>(null)
     val learnResult: StateFlow<String?> = _learnResult
