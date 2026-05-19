@@ -155,10 +155,7 @@ fun HomeScreen(
                     onValueChange = { renameTaskName = it },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("文件名", color = TextSecondary) },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary,
-                        focusedBorderColor = AccentBlue, unfocusedBorderColor = DarkCard, cursorColor = AccentBlue
-                    ),
+                    colors = AppTextFieldColors,
                     singleLine = true
                 )
             },

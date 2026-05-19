@@ -10,16 +10,17 @@ import com.google.gson.JsonParser
 import com.thai2chinese.api.DictApiResult
 import com.thai2chinese.api.ThaiWordApi
 import com.thai2chinese.api.WhisperApi
+import com.thai2chinese.api.toSentences
 import com.thai2chinese.api.toSyllable
 import com.thai2chinese.api.toWords
 import com.thai2chinese.api.ThaiWordHeaders
 import com.thai2chinese.audio.AudioExtractor
-import com.thai2chinese.data.Word
 import com.thai2chinese.data.AppConfig
 import com.thai2chinese.data.Sentence
 import com.thai2chinese.data.TaskInfo
 import com.thai2chinese.data.TaskStore
 import com.thai2chinese.data.WordDetail
+import com.thai2chinese.util.retry
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.async
 import kotlinx.coroutines.Dispatchers
@@ -30,11 +31,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
-
-private suspend fun <T> retry(times: Int, block: suspend () -> T): T? {
-    repeat(times) { try { return block() } catch (_: Exception) { delay(1000L * (it + 1)) } }
-    return try { block() } catch (_: Exception) { null }
-}
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
     private val store = TaskStore(application)
@@ -62,6 +58,17 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     private var syncJob: Job? = null
     private val enrichingSentences = ConcurrentHashMap.newKeySet<Int>()
+
+    private suspend fun doEnrichSentence(sentence: Sentence, twUrl: String, headers: ThaiWordHeaders): Sentence {
+        val analyzed = retry(2) {
+            val r = ThaiWordApi.analyze(sentence.text, twUrl, headers)
+            if (r.words.isNotEmpty()) sentence.copy(words = r.words.toWords(sentence.start, sentence.end)) else sentence
+        } ?: sentence
+        val translation = if (analyzed.translation.isBlank()) {
+            retry(2) { ThaiWordApi.translate(sentence.text, twUrl, headers).translated } ?: ""
+        } else analyzed.translation
+        return if (translation.isNotBlank()) analyzed.copy(translation = translation) else analyzed
+    }
 
     private fun twHeaders() = ThaiWordHeaders(
         dictApi = config.dictApiUrl,
@@ -120,17 +127,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val currentTask = _task.value ?: return@launch
                 val sentence = currentTask.sentences[index]
-                val result = withContext(Dispatchers.IO) { ThaiWordApi.analyze(sentence.text, twUrl, headers) }
-                val enrichedWords = if (result.words.isNotEmpty()) {
-                    result.words.toWords(sentence.start, sentence.end)
-                } else sentence.words
-
-                val translation = if (sentence.translation.isBlank()) {
-                    try { withContext(Dispatchers.IO) { ThaiWordApi.translate(sentence.text, twUrl, headers) }.translated } catch (_: Exception) { "" }
-                } else sentence.translation
-
+                val enriched = withContext(Dispatchers.IO) { doEnrichSentence(sentence, twUrl, headers) }
                 val updatedSentences = currentTask.sentences.toMutableList()
-                updatedSentences[index] = sentence.copy(words = enrichedWords, translation = translation)
+                updatedSentences[index] = enriched
                 val updatedTask = currentTask.copy(sentences = updatedSentences)
                 _task.value = updatedTask; store.put(updatedTask)
             } catch (e: Exception) { Log.w("PlayerVM", "enrichSentence failed", e) }
@@ -226,7 +225,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val raw = withContext(Dispatchers.IO) { ThaiWordApi.learn(sentence.text, twUrl, headers) }
                 // 解析 JSON 提取 explanation 字段
-                val json = com.google.gson.JsonParser.parseString(raw).asJsonObject
+                val json = JsonParser.parseString(raw).asJsonObject
                 _learnResult.value = json.get("explanation")?.asString ?: raw
             } catch (e: Exception) {
                 _learnResult.value = "分析失败: ${e.message}"
@@ -262,16 +261,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                         try {
                             val twUrl = config.thaiwordUrl; val headers = twHeaders()
                             val current = _task.value?.sentences?.get(idx) ?: return@async
-                            val result = ThaiWordApi.analyze(current.text, twUrl, headers)
-                            val enrichedWords = if (result.words.isNotEmpty()) {
-                                result.words.toWords(current.start, current.end)
-                            } else current.words
-                            val translation = if (current.translation.isBlank()) {
-                                try { ThaiWordApi.translate(current.text, twUrl, headers).translated } catch (_: Exception) { "" }
-                            } else current.translation
+                            val enriched = doEnrichSentence(current, twUrl, headers)
                             val task = _task.value ?: return@async
                             val updated = task.sentences.toMutableList()
-                            updated[idx] = current.copy(words = enrichedWords, translation = translation)
+                            updated[idx] = enriched
                             _task.value = task.copy(sentences = updated); store.putWithoutSave(task.copy(sentences = updated))
                         } catch (e: Exception) { Log.w("PlayerVM", "batchEnrich failed", e) } finally { semaphore.release(); done++; _batchProgress.value = "$done/${pending.size}" }
                     }
@@ -336,16 +329,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 audioFile.delete()
 
                 // 将 Whisper 结果转为 Sentence，时间戳加上偏移
-                val newSentences = whisperResult.segments.filter { it.no_speech_prob < 0.3 }.map { seg ->
-                    val words = if (seg.words.isNotEmpty()) {
-                        seg.words.map { Word(text = it.word.trim(), start = it.start + startSec, end = it.end + startSec) }
-                    } else {
-                        val dur = seg.end - seg.start
-                        val tokens = seg.text.trim().split("\\s+".toRegex())
-                        val wordDur = if (tokens.isNotEmpty()) dur / tokens.size else dur
-                        tokens.mapIndexed { i, t -> Word(text = t, start = startSec + seg.start + i * wordDur, end = startSec + seg.start + (i + 1) * wordDur) }
-                    }
-                    Sentence(text = seg.text.trim(), start = seg.start + startSec, end = seg.end + startSec, words = words)
+                val newSentences = whisperResult.toSentences(startSec)
                 }
 
                 // 先展示未分析的结果
@@ -365,16 +349,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 val enriched = newSentences.map { s ->
                     async(Dispatchers.IO) {
                         semaphore.acquire()
-                        try {
-                            val analyzed = retry(2) {
-                                val r = ThaiWordApi.analyze(s.text, twUrl, headers)
-                                if (r.words.isNotEmpty()) s.copy(words = r.words.toWords(s.start, s.end)) else s
-                            } ?: s
-                            val translation = if (analyzed.translation.isBlank()) {
-                                retry(2) { ThaiWordApi.translate(s.text, twUrl, headers).translated } ?: ""
-                            } else analyzed.translation
-                            if (translation.isNotBlank()) analyzed.copy(translation = translation) else analyzed
-                        } finally { semaphore.release() }
+                        try { doEnrichSentence(s, twUrl, headers) } finally { semaphore.release() }
                     }
                 }.map { it.await() }
 

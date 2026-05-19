@@ -1,5 +1,6 @@
 package com.thai2chinese.ui.theme
 
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.ui.graphics.Color
 
 // 背景
@@ -30,3 +31,9 @@ fun toneColor(toneNumber: Int): Color = when (toneNumber) {
     1 -> ToneMid; 2 -> ToneLow; 3 -> ToneFalling; 4 -> ToneHigh; 5 -> ToneRising
     else -> TextMuted
 }
+
+val AppTextFieldColors = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary,
+    focusedBorderColor = AccentBlue, unfocusedBorderColor = DarkCard,
+    cursorColor = AccentBlue, focusedContainerColor = DarkCard, unfocusedContainerColor = DarkCard
+)

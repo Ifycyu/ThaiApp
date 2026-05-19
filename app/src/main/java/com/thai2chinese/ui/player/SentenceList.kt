@@ -138,10 +138,10 @@ fun EditSentenceDialog(sentence: Sentence?, onDismiss: () -> Unit, onSave: (Stri
         text = {
             Column {
                 OutlinedTextField(value = text, onValueChange = { text = it }, label = { Text("泰语", color = TextSecondary) },
-                    modifier = Modifier.fillMaxWidth(), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, focusedBorderColor = AccentBlue, unfocusedBorderColor = DarkCard, cursorColor = AccentBlue))
+                    modifier = Modifier.fillMaxWidth(), colors = AppTextFieldColors)
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(value = translation, onValueChange = { translation = it }, label = { Text("中文翻译", color = TextSecondary) },
-                    modifier = Modifier.fillMaxWidth(), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, focusedBorderColor = AccentBlue, unfocusedBorderColor = DarkCard, cursorColor = AccentBlue))
+                    modifier = Modifier.fillMaxWidth(), colors = AppTextFieldColors)
             }
         },
         confirmButton = { TextButton(onClick = { onSave(text, translation); onDismiss() }) { Text("保存", color = AccentBlue) } },

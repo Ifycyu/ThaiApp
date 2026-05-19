@@ -219,12 +219,6 @@ fun PlayerProgressBar(
     var dragValue by remember { mutableStateOf(0f) }
     val displayValue = if (isDragging) dragValue else curSec
 
-    fun formatTime(ms: Float): String {
-        val total = (ms / 1000).toInt()
-        val m = total / 60; val s = total % 60
-        return "%d:%02d".format(m, s)
-    }
-
     Column(modifier = Modifier
         .fillMaxWidth()
         .padding(start = 4.dp, end = 4.dp, bottom = 4.dp)
@@ -245,7 +239,7 @@ fun PlayerProgressBar(
             )
         )
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(formatTime(displayValue * 1000f), color = if (isDragging) AccentBlue else TextMuted, fontSize = 13.sp)
+            Text(formatTime(displayValue.toDouble()), color = if (isDragging) AccentBlue else TextMuted, fontSize = 13.sp)
             Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = onPlayPause, modifier = Modifier.size(36.dp)) {
                 Icon(
@@ -255,7 +249,7 @@ fun PlayerProgressBar(
                 )
             }
             Spacer(modifier = Modifier.weight(1f))
-            Text(formatTime(duration), color = TextMuted, fontSize = 13.sp)
+            Text(formatTime(duration / 1000.0), color = TextMuted, fontSize = 13.sp)
         }
     }
 }

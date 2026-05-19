@@ -8,26 +8,19 @@ import androidx.core.app.NotificationCompat
 import com.thai2chinese.api.ThaiWordApi
 import com.thai2chinese.api.ThaiWordHeaders
 import com.thai2chinese.api.WhisperApi
+import com.thai2chinese.api.toSentences
 import com.thai2chinese.api.toWords
 import com.thai2chinese.audio.AudioExtractor
 import com.thai2chinese.data.AppConfig
-import com.thai2chinese.data.Sentence
 import com.thai2chinese.data.TaskInfo
 import com.thai2chinese.data.TaskStore
-import com.thai2chinese.data.Word
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import java.util.UUID
-
-private suspend fun <T> retry(times: Int, block: suspend () -> T): T? {
-    repeat(times) {
-        try { return block() } catch (_: Exception) { kotlinx.coroutines.delay(1000L * (it + 1)) }
-    }
-    return try { block() } catch (_: Exception) { null }
-}
+import com.thai2chinese.util.retry
 
 class ProcessingService : Service() {
     private val scope = CoroutineScope(Dispatchers.Default + Job())
@@ -74,15 +67,7 @@ class ProcessingService : Service() {
             updateProgress("Whisper 转写中...", 0.25f)
             val whisperResult = withContext(Dispatchers.IO) { WhisperApi.transcribe(audioFile, config.whisperBaseUrl, config.whisperApiKey) }
 
-            val sentences = whisperResult.segments.filter { it.no_speech_prob < 0.3 }.map { seg ->
-                val words = if (seg.words.isNotEmpty()) seg.words.map { Word(text = it.word.trim(), start = it.start, end = it.end) }
-                else {
-                    val dur = seg.end - seg.start; val tokens = seg.text.trim().split("\\s+".toRegex())
-                    val wordDur = if (tokens.isNotEmpty()) dur / tokens.size else dur
-                    tokens.mapIndexed { i, t -> Word(text = t, start = seg.start + i * wordDur, end = seg.start + (i + 1) * wordDur) }
-                }
-                Sentence(text = seg.text.trim(), start = seg.start, end = seg.end, words = words)
-            }
+            val sentences = whisperResult.toSentences()
 
             // 先保存未 enrichment 的版本，让用户可以先看视频
             val taskId = UUID.randomUUID().toString()

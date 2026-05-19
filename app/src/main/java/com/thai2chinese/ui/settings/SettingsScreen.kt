@@ -139,7 +139,4 @@ fun SettingsScreen(onBack: () -> Unit, config: AppConfig) {
 }
 
 @Composable private fun SectionTitle(text: String) { Text(text, color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp)) }
-@Composable private fun fieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary,
-    focusedBorderColor = AccentBlue, unfocusedBorderColor = DarkCard,
-    cursorColor = AccentBlue, focusedContainerColor = DarkCard, unfocusedContainerColor = DarkCard)
+@Composable private fun fieldColors() = AppTextFieldColors
