@@ -195,6 +195,7 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
             recordingFile = recordingFile,
             isPlayingRecording = isPlayingRecording,
             onDismiss = { showShadowingSheet = false; viewModel.stopShadowing() },
+            onPlaySentence = { viewModel.playSentenceOnce() },
             onToggleLoop = { viewModel.toggleLoop() },
             onStartRecording = { viewModel.startRecording() },
             onStopRecording = { viewModel.stopRecording() },
@@ -493,6 +494,7 @@ fun ShadowingSheet(
     recordingFile: java.io.File?,
     isPlayingRecording: Boolean,
     onDismiss: () -> Unit,
+    onPlaySentence: () -> Unit,
     onToggleLoop: () -> Unit,
     onStartRecording: () -> Unit,
     onStopRecording: () -> Unit,
@@ -530,6 +532,10 @@ fun ShadowingSheet(
 
             // 操作按钮
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                // 播放原句
+                IconButton(onClick = onPlaySentence) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = "播放原句", tint = AccentBlue, modifier = Modifier.size(28.dp))
+                }
                 // 循环开关
                 IconButton(onClick = onToggleLoop) {
                     Icon(if (isLooping) Icons.Default.RepeatOne else Icons.Default.Repeat,

@@ -211,6 +211,22 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         _isLooping.value = !_isLooping.value
     }
 
+    fun playSentenceOnce() {
+        val sentence = _shadowingSentence.value ?: return
+        loopJob?.cancel()
+        _isLooping.value = false
+        val startMs = (sentence.start * 1000).toLong()
+        val endMs = (sentence.end * 1000).toLong()
+        player.seekTo(startMs)
+        player.play()
+        viewModelScope.launch {
+            while (player.isPlaying && player.currentPosition < endMs) {
+                delay(50)
+            }
+            player.pause()
+        }
+    }
+
     private fun startLoop(sentence: Sentence) {
         loopJob?.cancel()
         loopJob = viewModelScope.launch {
