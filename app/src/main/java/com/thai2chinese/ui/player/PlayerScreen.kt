@@ -51,7 +51,14 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     val retranscribeProgress by viewModel.retranscribeProgress.collectAsState()
     val currentPosition by viewModel.currentPosition.collectAsState()
     val duration by viewModel.duration.collectAsState()
-    val isPlaying by remember { derivedStateOf { viewModel.player.isPlaying } }
+    var isPlaying by remember { mutableStateOf(false) }
+    DisposableEffect(Unit) {
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(playing: Boolean) { isPlaying = playing }
+        }
+        viewModel.player.addListener(listener)
+        onDispose { viewModel.player.removeListener(listener) }
+    }
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val clipboardManager = LocalClipboardManager.current
