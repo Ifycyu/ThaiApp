@@ -106,7 +106,7 @@ fun SettingsScreen(onBack: () -> Unit, config: AppConfig) {
                 var totalSize = 0L
                 var count = 0
                 cacheDir.listFiles()?.forEach { file ->
-                    if (file.name.startsWith("temp_video_") || (file.name.startsWith("audio_") && file.extension == "m4a")) {
+                    if (file.name.startsWith("temp_video_") || (file.name.startsWith("audio_") && file.extension == "m4a") || file.name.startsWith("shadowing_")) {
                         totalSize += file.length()
                         file.delete()
                         count++

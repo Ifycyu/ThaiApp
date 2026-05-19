@@ -59,6 +59,21 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private var syncJob: Job? = null
     private val enrichingSentences = ConcurrentHashMap.newKeySet<Int>()
 
+    // 跟读功能
+    private val _shadowingSentence = MutableStateFlow<Sentence?>(null)
+    val shadowingSentence: StateFlow<Sentence?> = _shadowingSentence
+    private val _isLooping = MutableStateFlow(true)
+    val isLooping: StateFlow<Boolean> = _isLooping
+    private val _recordingFile = MutableStateFlow<java.io.File?>(null)
+    val recordingFile: StateFlow<java.io.File?> = _recordingFile
+    private val _isRecording = MutableStateFlow(false)
+    val isRecording: StateFlow<Boolean> = _isRecording
+    private val _isPlayingRecording = MutableStateFlow(false)
+    val isPlayingRecording: StateFlow<Boolean> = _isPlayingRecording
+    private var loopJob: Job? = null
+    private val recordingHelper = com.thai2chinese.audio.RecordingHelper(application)
+    private var recordingPlayer: android.media.MediaPlayer? = null
+
     private suspend fun doEnrichSentence(sentence: Sentence, twUrl: String, headers: ThaiWordHeaders): Sentence {
         val analyzed = retry(2) {
             val r = ThaiWordApi.analyze(sentence.text, twUrl, headers)
@@ -173,6 +188,83 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun seekTo(time: Double) { player.seekTo((time * 1000).toLong()) }
     fun seekToMs(ms: Float) { player.seekTo(ms.toLong()) }
     fun togglePlayPause() { if (player.isPlaying) player.pause() else player.play() }
+
+    // 跟读功能
+    fun startShadowing(sentence: Sentence) {
+        player.pause()
+        _shadowingSentence.value = sentence
+        _isLooping.value = true
+        startLoop(sentence)
+    }
+
+    fun stopShadowing() {
+        loopJob?.cancel()
+        loopJob = null
+        _isLooping.value = false
+        _shadowingSentence.value = null
+        stopRecording()
+        stopRecordingPlayback()
+        cleanupRecordingFile()
+    }
+
+    fun toggleLoop() {
+        _isLooping.value = !_isLooping.value
+    }
+
+    private fun startLoop(sentence: Sentence) {
+        loopJob?.cancel()
+        loopJob = viewModelScope.launch {
+            while (_isLooping.value && _shadowingSentence.value != null) {
+                val startMs = (sentence.start * 1000).toLong()
+                val endMs = (sentence.end * 1000).toLong()
+                player.seekTo(startMs)
+                player.play()
+                // 等到播放结束
+                while (player.isPlaying && player.currentPosition < endMs && _isLooping.value) {
+                    delay(50)
+                }
+                if (!_isLooping.value) break
+                player.pause()
+                delay(300) // 句子间停顿
+            }
+        }
+    }
+
+    fun startRecording() {
+        val file = java.io.File(context.cacheDir, "shadowing_${System.currentTimeMillis()}.m4a")
+        _recordingFile.value = file
+        recordingHelper.startRecording(file)
+        _isRecording.value = true
+    }
+
+    fun stopRecording() {
+        recordingHelper.stopRecording()
+        _isRecording.value = false
+    }
+
+    fun playRecording() {
+        val file = _recordingFile.value ?: return
+        if (!file.exists()) return
+        stopRecordingPlayback()
+        recordingPlayer = android.media.MediaPlayer().apply {
+            setDataSource(file.absolutePath)
+            prepare()
+            start()
+            setOnCompletionListener { _isPlayingRecording.value = false }
+        }
+        _isPlayingRecording.value = true
+    }
+
+    fun stopRecordingPlayback() {
+        recordingPlayer?.release()
+        recordingPlayer = null
+        _isPlayingRecording.value = false
+    }
+
+    private fun cleanupRecordingFile() {
+        _recordingFile.value?.delete()
+        _recordingFile.value = null
+    }
 
     // 长按句子菜单
     private val _menuSentence = MutableStateFlow<Sentence?>(null)
@@ -371,5 +463,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    override fun onCleared() { super.onCleared(); syncJob?.cancel(); player.release() }
+    override fun onCleared() {
+        super.onCleared()
+        loopJob?.cancel()
+        recordingHelper.cancel()
+        recordingPlayer?.release()
+        cleanupRecordingFile()
+        syncJob?.cancel()
+        player.release()
+    }
 }

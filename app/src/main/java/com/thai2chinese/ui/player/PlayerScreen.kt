@@ -1,17 +1,25 @@
 package com.thai2chinese.ui.player
 
 import android.content.res.Configuration
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.fadeOut
@@ -26,6 +34,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,6 +44,11 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.PlayerView
 import com.thai2chinese.ui.theme.*
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 
 @Composable
 fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel = viewModel()) {
@@ -68,6 +82,29 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     var showRetranscribeDialog by remember { mutableStateOf(false) }
     var retranscribeSentence by remember { mutableStateOf<com.thai2chinese.data.Sentence?>(null) }
     var showPlayer by remember { mutableStateOf(true) }
+    var showShadowingSheet by remember { mutableStateOf(false) }
+    var pendingShadowingSentence by remember { mutableStateOf<com.thai2chinese.data.Sentence?>(null) }
+    val context = LocalContext.current
+
+    val recordPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            pendingShadowingSentence?.let {
+                viewModel.startShadowing(it)
+                showShadowingSheet = true
+            }
+        }
+        pendingShadowingSentence = null
+    }
+
+    fun launchShadowing(sentence: com.thai2chinese.data.Sentence) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            viewModel.startShadowing(sentence)
+            showShadowingSheet = true
+        } else {
+            pendingShadowingSentence = sentence
+            recordPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
 
     LaunchedEffect(taskId) { viewModel.loadTask(taskId) }
 
@@ -142,6 +179,30 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
         )
     }
 
+    // 跟读弹窗
+    val shadowingSentence by viewModel.shadowingSentence.collectAsState()
+    val isLooping by viewModel.isLooping.collectAsState()
+    val isRecording by viewModel.isRecording.collectAsState()
+    val recordingFile by viewModel.recordingFile.collectAsState()
+    val isPlayingRecording by viewModel.isPlayingRecording.collectAsState()
+
+    if (showShadowingSheet) {
+        ShadowingSheet(
+            sentence = shadowingSentence,
+            isLooping = isLooping,
+            isRecording = isRecording,
+            recordingFile = recordingFile,
+            isPlayingRecording = isPlayingRecording,
+            onDismiss = { showShadowingSheet = false; viewModel.stopShadowing() },
+            onToggleLoop = { viewModel.toggleLoop() },
+            onStartRecording = { viewModel.startRecording() },
+            onStopRecording = { viewModel.stopRecording() },
+            onPlayRecording = { viewModel.playRecording() },
+            onStopRecordingPlayback = { viewModel.stopRecordingPlayback() },
+            onWordClick = { w, c -> viewModel.onWordClick(w, c) }
+        )
+    }
+
     if (task == null) {
         Box(modifier = Modifier.fillMaxSize().background(DarkBg), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = AccentBlue) }
         return
@@ -167,7 +228,14 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
             }
             PlayerProgressBar(currentPosition, duration, isPlaying,
                 onSeek = { viewModel.seekToMs(it) },
-                onPlayPause = { viewModel.togglePlayPause() })
+                onPlayPause = { viewModel.togglePlayPause() },
+                onShadowing = {
+                    val sentences = currentTask.sentences
+                    val idx = activeSentence
+                    if (idx >= 0 && idx < sentences.size) {
+                        launchShadowing(sentences[idx])
+                    }
+                })
         }
     } else {
         Column(modifier = Modifier.fillMaxSize().background(DarkBg)) {
@@ -196,7 +264,14 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
                 modifier = Modifier.weight(1f))
             PlayerProgressBar(currentPosition, duration, isPlaying,
                 onSeek = { viewModel.seekToMs(it) },
-                onPlayPause = { viewModel.togglePlayPause() })
+                onPlayPause = { viewModel.togglePlayPause() },
+                onShadowing = {
+                    val sentences = currentTask.sentences
+                    val idx = activeSentence
+                    if (idx >= 0 && idx < sentences.size) {
+                        launchShadowing(sentences[idx])
+                    }
+                })
         }
     }
 }
@@ -218,7 +293,7 @@ fun VideoPlayerView(player: androidx.media3.common.Player, modifier: Modifier = 
 @Composable
 fun PlayerProgressBar(
     currentPosition: Float, duration: Float, isPlaying: Boolean,
-    onSeek: (Float) -> Unit, onPlayPause: () -> Unit
+    onSeek: (Float) -> Unit, onPlayPause: () -> Unit, onShadowing: () -> Unit = {}
 ) {
     val totalSec = duration / 1000f
     val curSec = currentPosition / 1000f
@@ -254,6 +329,10 @@ fun PlayerProgressBar(
                     contentDescription = if (isPlaying) "暂停" else "播放",
                     tint = TextPrimary, modifier = Modifier.size(22.dp)
                 )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            IconButton(onClick = onShadowing, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.Mic, contentDescription = "跟读", tint = TextPrimary, modifier = Modifier.size(22.dp))
             }
             Spacer(modifier = Modifier.weight(1f))
             Text(formatTime(duration / 1000.0), color = TextMuted, fontSize = 13.sp)
@@ -402,4 +481,79 @@ fun RetranscribeDialog(sentence: com.thai2chinese.data.Sentence, duration: Float
         confirmButton = { TextButton(onClick = { onConfirm(startSec, endSec) }) { Text("开始识别", color = AccentBlue) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消", color = TextMuted) } }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@Composable
+fun ShadowingSheet(
+    sentence: com.thai2chinese.data.Sentence?,
+    isLooping: Boolean,
+    isRecording: Boolean,
+    recordingFile: java.io.File?,
+    isPlayingRecording: Boolean,
+    onDismiss: () -> Unit,
+    onToggleLoop: () -> Unit,
+    onStartRecording: () -> Unit,
+    onStopRecording: () -> Unit,
+    onPlayRecording: () -> Unit,
+    onStopRecordingPlayback: () -> Unit,
+    onWordClick: (String, String) -> Unit
+) {
+    if (sentence == null) return
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = DarkCard, contentColor = TextPrimary) {
+        Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+            // 句子显示
+            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                if (sentence.words.isNotEmpty()) {
+                    FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        sentence.words.forEach { word ->
+                            val ipa = when { word.ipa.isNotBlank() -> word.ipa; word.roman.isNotBlank() -> word.roman; else -> word.text }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.clickable { onWordClick(word.text, sentence.text) }
+                                    .padding(horizontal = 6.dp, vertical = 4.dp)) {
+                                Text(ipa, color = TextMuted, fontSize = 13.sp, lineHeight = 16.sp)
+                                Text(word.text, color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            }
+                        }
+                    }
+                } else {
+                    Text(sentence.text, color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                }
+                if (sentence.translation.isNotBlank()) {
+                    Text(sentence.translation, color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
+                }
+            }
+
+            HorizontalDivider(color = DarkSurface, modifier = Modifier.padding(vertical = 8.dp))
+
+            // 操作按钮
+            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                // 循环开关
+                IconButton(onClick = onToggleLoop) {
+                    Icon(if (isLooping) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                        contentDescription = "循环", tint = if (isLooping) AccentBlue else TextMuted, modifier = Modifier.size(28.dp))
+                }
+                // 录音按钮
+                IconButton(onClick = { if (isRecording) onStopRecording() else onStartRecording() }) {
+                    Icon(if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
+                        contentDescription = if (isRecording) "停止录音" else "录音",
+                        tint = if (isRecording) ToneLow else TextPrimary, modifier = Modifier.size(28.dp))
+                }
+                // 播放录音
+                if (recordingFile != null && recordingFile.exists() && !isRecording) {
+                    IconButton(onClick = { if (isPlayingRecording) onStopRecordingPlayback() else onPlayRecording() }) {
+                        Icon(if (isPlayingRecording) Icons.Default.Stop else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlayingRecording) "停止" else "播放录音",
+                            tint = if (isPlayingRecording) ToneLow else AccentBlue, modifier = Modifier.size(28.dp))
+                    }
+                }
+            }
+
+            // 录音状态提示
+            if (isRecording) {
+                Text("录音中...", color = ToneLow, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp).fillMaxWidth(), textAlign = TextAlign.Center)
+            }
+        }
+    }
 }
