@@ -330,7 +330,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
                 // 将 Whisper 结果转为 Sentence，时间戳加上偏移
                 val newSentences = whisperResult.toSentences(startSec)
-                }
 
                 // 先展示未分析的结果
                 val taskNow = _task.value ?: return@launch

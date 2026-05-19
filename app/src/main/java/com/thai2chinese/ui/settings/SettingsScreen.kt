@@ -139,4 +139,4 @@ fun SettingsScreen(onBack: () -> Unit, config: AppConfig) {
 }
 
 @Composable private fun SectionTitle(text: String) { Text(text, color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp)) }
-@Composable private fun fieldColors() = AppTextFieldColors
+@Composable private fun fieldColors() = appTextFieldColors()

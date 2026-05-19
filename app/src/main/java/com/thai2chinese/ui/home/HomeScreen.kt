@@ -155,7 +155,7 @@ fun HomeScreen(
                     onValueChange = { renameTaskName = it },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("文件名", color = TextSecondary) },
-                    colors = AppTextFieldColors,
+                    colors = appTextFieldColors(),
                     singleLine = true
                 )
             },
