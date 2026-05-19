@@ -14,7 +14,6 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -147,7 +146,7 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
         Column(modifier = Modifier.fillMaxSize().background(DarkBg)) {
             Row(modifier = Modifier.weight(1f)) {
                 Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                    AnimatedVisibility(visible = showPlayer, exit = fadeOut()) {
+                    androidx.compose.animation.AnimatedVisibility(visible = showPlayer, exit = fadeOut()) {
                         VideoPlayerView(viewModel.player, Modifier.fillMaxSize())
                     }
                 }
@@ -179,7 +178,7 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
                 }
             }
             Box(modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
-                AnimatedVisibility(visible = showPlayer, exit = fadeOut()) {
+                androidx.compose.animation.AnimatedVisibility(visible = showPlayer, exit = fadeOut()) {
                     VideoPlayerView(viewModel.player, Modifier.fillMaxSize())
                 }
             }
