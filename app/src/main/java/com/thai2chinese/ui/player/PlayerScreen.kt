@@ -13,6 +13,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,12 +61,16 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showRetranscribeDialog by remember { mutableStateOf(false) }
     var retranscribeSentence by remember { mutableStateOf<com.thai2chinese.data.Sentence?>(null) }
+    var showPlayer by remember { mutableStateOf(true) }
 
     LaunchedEffect(taskId) { viewModel.loadTask(taskId) }
 
-    // 离开页面时暂停播放
-    DisposableEffect(Unit) {
-        onDispose { viewModel.player.pause() }
+    // 返回前先隐藏播放器，避免残留
+    BackHandler {
+        showPlayer = false
+        viewModel.player.clearMediaItems()
+        viewModel.player.stop()
+        onBack()
     }
 
     // 词卡
@@ -139,7 +146,11 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     if (isLandscape) {
         Column(modifier = Modifier.fillMaxSize().background(DarkBg)) {
             Row(modifier = Modifier.weight(1f)) {
-                Box(modifier = Modifier.weight(1f).fillMaxHeight()) { VideoPlayerView(viewModel.player, Modifier.fillMaxSize()) }
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    AnimatedVisibility(visible = showPlayer, exit = fadeOut()) {
+                        VideoPlayerView(viewModel.player, Modifier.fillMaxSize())
+                    }
+                }
                 Column(modifier = Modifier.weight(1f).fillMaxHeight().background(DarkSurface)) {
                     SentenceList(currentTask.sentences, activeSentence, activeWord,
                         onWordClick = { w, c -> viewModel.onWordClick(w, c) },
@@ -167,7 +178,11 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
                     }
                 }
             }
-            Box(modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)) { VideoPlayerView(viewModel.player, Modifier.fillMaxSize()) }
+            Box(modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
+                AnimatedVisibility(visible = showPlayer, exit = fadeOut()) {
+                    VideoPlayerView(viewModel.player, Modifier.fillMaxSize())
+                }
+            }
             SentenceList(currentTask.sentences, activeSentence, activeWord,
                 onWordClick = { w, c -> viewModel.onWordClick(w, c) },
                 onSentenceClick = { viewModel.seekTo(it) },
