@@ -40,9 +40,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
-import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.PlayerView
+import com.thai2chinese.R
 import com.thai2chinese.ui.theme.*
 import android.Manifest
 import android.content.pm.PackageManager
@@ -282,13 +282,9 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
 fun VideoPlayerView(player: androidx.media3.common.Player, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     AndroidView(factory = {
-        PlayerView(context).apply {
-            this.player = player
-            useController = false
-            setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
-            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-            useArtwork = false
-            useTextureView = true
+        android.view.LayoutInflater.from(context).inflate(R.layout.player_view_texture, null, false).apply {
+            val playerView = this as PlayerView
+            playerView.player = player
         }
     }, modifier = modifier)
 }
