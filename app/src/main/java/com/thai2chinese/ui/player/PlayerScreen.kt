@@ -288,6 +288,7 @@ fun VideoPlayerView(player: androidx.media3.common.Player, modifier: Modifier = 
             setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
             useArtwork = false
+            useTextureView = true
         }
     }, modifier = modifier)
 }
