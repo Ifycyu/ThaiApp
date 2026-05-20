@@ -37,7 +37,8 @@ object WhisperApi {
 
         val response = client.newCall(request).execute()
         val responseBody = response.body?.string() ?: throw Exception("Empty response")
-        if (!response.isSuccessful) throw Exception("Whisper error ${response.code}: $responseBody")
+        if (!response.isSuccessful) throw Exception("Whisper error ${response.code}: ${responseBody.take(200)}")
+        if (!responseBody.trimStart().startsWith("{")) throw Exception("Whisper 返回非 JSON: ${responseBody.take(200)}")
         return gson.fromJson(responseBody, WhisperResponse::class.java)
     }
 }
