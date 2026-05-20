@@ -53,23 +53,13 @@ fun HomeScreen(
     }
     val pickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let {
-            // 复制到缓存，避免权限问题
-            try {
-                val cacheFile = java.io.File(context.cacheDir, "pick_${System.currentTimeMillis()}.mp4")
-                context.contentResolver.openInputStream(it)?.use { input ->
-                    cacheFile.outputStream().use { output -> input.copyTo(output) }
-                }
-                val filename = context.contentResolver.query(it, null, null, null, null)?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                        if (idx >= 0) cursor.getString(idx) else null
-                    } else null
-                } ?: "video.mp4"
-                onNavigateToProcessing("file://${cacheFile.absolutePath}", filename)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                onNavigateToProcessing(it.toString(), "video.mp4")
-            }
+            val filename = context.contentResolver.query(it, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (idx >= 0) cursor.getString(idx) else null
+                } else null
+            } ?: "video.mp4"
+            onNavigateToProcessing(it.toString(), filename)
         }
     }
 

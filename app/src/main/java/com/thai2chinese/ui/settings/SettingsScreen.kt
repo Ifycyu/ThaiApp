@@ -106,7 +106,16 @@ fun SettingsScreen(onBack: () -> Unit, config: AppConfig) {
                 var totalSize = 0L
                 var count = 0
                 cacheDir.listFiles()?.forEach { file ->
-                    if (file.name.startsWith("temp_video_") || (file.name.startsWith("audio_") && file.extension == "m4a") || file.name.startsWith("shadowing_") || file.name.startsWith("pick_")) {
+                    if (file.name.startsWith("temp_video_") || (file.name.startsWith("audio_") && file.extension == "m4a") || (file.name.startsWith("range_") && file.extension == "m4a") || file.name.startsWith("shadowing_") || file.name.startsWith("pick_")) {
+                        totalSize += file.length()
+                        file.delete()
+                        count++
+                    }
+                }
+                // 清理 TTS 缓存
+                val ttsDir = java.io.File(cacheDir, "tts_cache")
+                if (ttsDir.exists()) {
+                    ttsDir.listFiles()?.forEach { file ->
                         totalSize += file.length()
                         file.delete()
                         count++

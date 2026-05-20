@@ -152,11 +152,20 @@ object AudioExtractor {
                 if (file.name.startsWith("temp_video_") && now - file.lastModified() > 3600_000) {
                     file.delete()
                 }
-                if (file.name.startsWith("audio_") && file.extension == "m4a" && now - file.lastModified() > 3600_000) {
+                if ((file.name.startsWith("audio_") || file.name.startsWith("range_")) && file.extension == "m4a" && now - file.lastModified() > 3600_000) {
                     file.delete()
                 }
                 if (file.name.startsWith("pick_") && now - file.lastModified() > 3600_000) {
                     file.delete()
+                }
+            }
+            // 清理超过 7 天的 TTS 缓存
+            val ttsDir = java.io.File(cacheDir, "tts_cache")
+            if (ttsDir.exists()) {
+                ttsDir.listFiles()?.forEach { file ->
+                    if (now - file.lastModified() > 7 * 86400_000) {
+                        file.delete()
+                    }
                 }
             }
         } catch (e: Exception) { e.printStackTrace() }
