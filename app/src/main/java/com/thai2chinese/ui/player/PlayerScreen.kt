@@ -471,8 +471,8 @@ fun RetranscribeDialog(sentence: com.thai2chinese.data.Sentence, duration: Float
             else -> null
         }
     }
-    var startInput by remember { mutableStateOf(secToInput(sentence.start)) }
-    var endInput by remember { mutableStateOf(secToInput(sentence.end)) }
+    var startInput by remember { mutableStateOf(secToInput(sentence.start.toFloat())) }
+    var endInput by remember { mutableStateOf(secToInput(sentence.end.toFloat())) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
