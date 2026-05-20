@@ -64,6 +64,7 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     val isLearning by viewModel.isLearning.collectAsState()
     val batchProgress by viewModel.batchProgress.collectAsState()
     val retranscribeProgress by viewModel.retranscribeProgress.collectAsState()
+    val displayMode by viewModel.displayMode.collectAsState()
     val currentPosition by viewModel.currentPosition.collectAsState()
     val duration by viewModel.duration.collectAsState()
     var isPlaying by remember { mutableStateOf(false) }
@@ -229,6 +230,7 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
                 }
                 Column(modifier = Modifier.weight(1f).fillMaxHeight().background(DarkSurface)) {
                     SentenceList(currentTask.sentences, activeSentence, activeWord,
+                        displayMode = displayMode,
                         onWordClick = { w, c -> viewModel.onWordClick(w, c) },
                         onSentenceClick = { viewModel.seekTo(it) },
                         onSentenceLongClick = { idx, sent -> viewModel.showSentenceMenu(idx, sent) },
@@ -236,6 +238,7 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
                 }
             }
             PlayerProgressBar(currentPosition, duration, isPlaying,
+                displayMode = displayMode,
                 onSeek = { viewModel.seekToMs(it) },
                 onPlayPause = { viewModel.togglePlayPause() },
                 onShadowing = {
@@ -244,7 +247,8 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
                     if (idx >= 0 && idx < sentences.size) {
                         launchShadowing(sentences[idx])
                     }
-                })
+                },
+                onToggleDisplayMode = { viewModel.toggleDisplayMode() })
         }
     } else {
         Column(modifier = Modifier.fillMaxSize().background(DarkBg)) {
@@ -267,11 +271,13 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
                 }
             }
             SentenceList(currentTask.sentences, activeSentence, activeWord,
+                displayMode = displayMode,
                 onWordClick = { w, c -> viewModel.onWordClick(w, c) },
                 onSentenceClick = { viewModel.seekTo(it) },
                 onSentenceLongClick = { idx, sent -> viewModel.showSentenceMenu(idx, sent) },
                 modifier = Modifier.weight(1f))
             PlayerProgressBar(currentPosition, duration, isPlaying,
+                displayMode = displayMode,
                 onSeek = { viewModel.seekToMs(it) },
                 onPlayPause = { viewModel.togglePlayPause() },
                 onShadowing = {
@@ -280,7 +286,8 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
                     if (idx >= 0 && idx < sentences.size) {
                         launchShadowing(sentences[idx])
                     }
-                })
+                },
+                onToggleDisplayMode = { viewModel.toggleDisplayMode() })
         }
     }
 }
@@ -299,7 +306,9 @@ fun VideoPlayerView(player: androidx.media3.common.Player, modifier: Modifier = 
 @Composable
 fun PlayerProgressBar(
     currentPosition: Float, duration: Float, isPlaying: Boolean,
-    onSeek: (Float) -> Unit, onPlayPause: () -> Unit, onShadowing: () -> Unit = {}
+    displayMode: Int = 0,
+    onSeek: (Float) -> Unit, onPlayPause: () -> Unit, onShadowing: () -> Unit = {},
+    onToggleDisplayMode: () -> Unit = {}
 ) {
     val totalSec = duration / 1000f
     val curSec = currentPosition / 1000f
@@ -339,6 +348,10 @@ fun PlayerProgressBar(
             Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = onShadowing, modifier = Modifier.size(36.dp)) {
                 Icon(Icons.Default.Mic, contentDescription = "跟读", tint = TextPrimary, modifier = Modifier.size(22.dp))
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            TextButton(onClick = onToggleDisplayMode, modifier = Modifier.height(28.dp)) {
+                Text(if (displayMode == 0) "IPA" else "罗马", color = AccentBlue, fontSize = 12.sp)
             }
             Spacer(modifier = Modifier.weight(1f))
             Text(formatTime(duration / 1000.0), color = TextMuted, fontSize = 13.sp)

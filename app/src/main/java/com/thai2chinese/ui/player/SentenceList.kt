@@ -27,6 +27,7 @@ import com.thai2chinese.ui.theme.*
 @Composable
 fun SentenceList(
     sentences: List<Sentence>, activeSentence: Int, activeWord: Int,
+    displayMode: Int = 0,
     onWordClick: (String, String) -> Unit,
     onSentenceClick: (Double) -> Unit,
     onSentenceLongClick: (Int, Sentence) -> Unit,
@@ -39,6 +40,7 @@ fun SentenceList(
         itemsIndexed(sentences) { index, sentence ->
             SentenceItem(sentence = sentence, isActive = index == activeSentence,
                 activeWord = if (index == activeSentence) activeWord else -1,
+                displayMode = displayMode,
                 onWordClick = onWordClick,
                 onSentenceClick = { onSentenceClick(sentence.start) },
                 onLongClick = { onSentenceLongClick(index, sentence) })
@@ -48,7 +50,7 @@ fun SentenceList(
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
-fun SentenceItem(sentence: Sentence, isActive: Boolean, activeWord: Int,
+fun SentenceItem(sentence: Sentence, isActive: Boolean, activeWord: Int, displayMode: Int = 0,
     onWordClick: (String, String) -> Unit, onSentenceClick: () -> Unit, onLongClick: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()
         .clip(RoundedCornerShape(12.dp))
@@ -60,7 +62,13 @@ fun SentenceItem(sentence: Sentence, isActive: Boolean, activeWord: Int,
         if (sentence.words.isNotEmpty()) {
             FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 sentence.words.forEachIndexed { wordIdx, word ->
-                    val ipa = when { word.ipa.isNotBlank() -> word.ipa; word.roman.isNotBlank() -> word.roman; else -> word.text }
+                    val ipa = when {
+                        displayMode == 0 && word.ipa.isNotBlank() -> word.ipa
+                        displayMode == 1 && word.roman.isNotBlank() -> word.roman
+                        word.ipa.isNotBlank() -> word.ipa
+                        word.roman.isNotBlank() -> word.roman
+                        else -> word.text
+                    }
                     val isActive = wordIdx == activeWord
                     Column(horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.clickable { onWordClick(word.text, sentence.text) }
