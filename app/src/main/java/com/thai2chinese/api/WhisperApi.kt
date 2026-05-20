@@ -18,6 +18,9 @@ object WhisperApi {
         .build()
 
     fun transcribe(audioFile: File, baseUrl: String, apiKey: String): WhisperResponse {
+        if (baseUrl.isBlank() || apiKey.isBlank()) {
+            throw Exception("请先在设置中配置 Whisper API 地址和密钥")
+        }
         val body = MultipartBody.Builder().setType(MultipartBody.FORM)
             .addFormDataPart("model", "whisper-1")
             .addFormDataPart("language", "th")
