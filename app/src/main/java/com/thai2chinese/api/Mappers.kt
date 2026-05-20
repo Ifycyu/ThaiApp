@@ -22,7 +22,7 @@ fun AnalyzeSyllable.toSyllable(): Syllable = Syllable(
 
 fun AnalyzeWord.toWord(start: Double, end: Double): Word = Word(
     text = word,
-    roman = roman,
+    roman = romanize,
     start = start,
     end = end,
     ipa = ipa,

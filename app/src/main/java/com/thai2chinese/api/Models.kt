@@ -23,7 +23,7 @@ fun WhisperResponse.toSentences(offset: Double = 0.0): List<Sentence> {
 }
 
 data class AnalyzeResponse(val sentence: String = "", val words: List<AnalyzeWord> = emptyList())
-data class AnalyzeWord(val word: String = "", val ipa: String = "", val roman: String = "", val word_class: String = "", val chinese: String = "", val syllables: List<AnalyzeSyllable> = emptyList())
+data class AnalyzeWord(val word: String = "", val ipa: String = "", val romanize: String = "", val word_class: String = "", val chinese: String = "", val syllables: List<AnalyzeSyllable> = emptyList())
 data class AnalyzeSyllable(
     val syllable: String = "",
     val text: String = "",
