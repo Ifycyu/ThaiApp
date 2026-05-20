@@ -53,17 +53,25 @@ fun HomeScreen(
     }
     val pickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let {
-            // 持久化读取权限，否则 Service 里读会 Permission Denial
-            try {
-                context.contentResolver.takePersistableUriPermission(it, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            } catch (_: Exception) {}
             val filename = context.contentResolver.query(it, null, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
                     val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
                     if (idx >= 0) cursor.getString(idx) else null
                 } else null
             } ?: "video.mp4"
-            onNavigateToProcessing(it.toString(), filename)
+            // 复制到缓存，Service 需要文件访问权限
+            try {
+                val cacheFile = java.io.File(context.cacheDir, "video_${it.hashCode()}.mp4")
+                if (!cacheFile.exists()) {
+                    context.contentResolver.openInputStream(it)?.use { input ->
+                        cacheFile.outputStream().use { output -> input.copyTo(output) }
+                    }
+                }
+                onNavigateToProcessing("file://${cacheFile.absolutePath}", filename)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onNavigateToProcessing(it.toString(), filename)
+            }
         }
     }
 
