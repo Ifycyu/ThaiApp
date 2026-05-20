@@ -211,6 +211,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         loopJob = null
         _isLooping.value = false
         _shadowingSentence.value = null
+        _shadowingWordIndex.value = -1
         stopRecording()
         stopRecordingPlayback()
         cleanupRecordingFile()
@@ -218,6 +219,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun toggleLoop() {
         _isLooping.value = !_isLooping.value
+        if (_isLooping.value) {
+            _shadowingSentence.value?.let { startLoop(it) }
+        } else {
+            loopJob?.cancel()
+        }
     }
 
     fun playSentenceOnce() {
@@ -229,10 +235,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         player.seekTo(startMs)
         player.play()
         viewModelScope.launch {
-            while (player.isPlaying && player.currentPosition < endMs) {
+            delay(100) // 等播放器启动
+            while (player.currentPosition < endMs && _shadowingSentence.value != null) {
+                updateShadowingWordIndex(sentence, player.currentPosition / 1000.0)
                 delay(50)
             }
             player.pause()
+            _shadowingWordIndex.value = -1
         }
     }
 
@@ -244,15 +253,29 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 val endMs = (sentence.end * 1000).toLong()
                 player.seekTo(startMs)
                 player.play()
-                // 等到播放结束
-                while (player.isPlaying && player.currentPosition < endMs && _isLooping.value) {
+                delay(100) // 等播放器启动
+                while (player.currentPosition < endMs && _isLooping.value && _shadowingSentence.value != null) {
+                    updateShadowingWordIndex(sentence, player.currentPosition / 1000.0)
                     delay(50)
                 }
-                if (!_isLooping.value) break
                 player.pause()
+                _shadowingWordIndex.value = -1
+                if (!_isLooping.value) break
                 delay(300) // 句子间停顿
             }
         }
+    }
+
+    private val _shadowingWordIndex = MutableStateFlow(-1)
+    val shadowingWordIndex: StateFlow<Int> = _shadowingWordIndex
+
+    private fun updateShadowingWordIndex(sentence: Sentence, posSec: Double) {
+        val words = sentence.words
+        var found = -1
+        for (i in words.indices) {
+            if (posSec >= words[i].start && posSec < words[i].end) { found = i; break }
+        }
+        _shadowingWordIndex.value = found
     }
 
     fun startRecording() {

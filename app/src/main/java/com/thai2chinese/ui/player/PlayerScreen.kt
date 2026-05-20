@@ -3,6 +3,7 @@ package com.thai2chinese.ui.player
 import android.content.res.Configuration
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -187,6 +188,7 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     val isRecording by viewModel.isRecording.collectAsState()
     val recordingFile by viewModel.recordingFile.collectAsState()
     val isPlayingRecording by viewModel.isPlayingRecording.collectAsState()
+    val shadowingWordIndex by viewModel.shadowingWordIndex.collectAsState()
 
     if (showShadowingSheet) {
         ShadowingSheet(
@@ -195,6 +197,7 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
             isRecording = isRecording,
             recordingFile = recordingFile,
             isPlayingRecording = isPlayingRecording,
+            activeWordIndex = shadowingWordIndex,
             onDismiss = { showShadowingSheet = false; viewModel.stopShadowing() },
             onPlaySentence = { viewModel.playSentenceOnce() },
             onToggleLoop = { viewModel.toggleLoop() },
@@ -494,6 +497,7 @@ fun ShadowingSheet(
     isRecording: Boolean,
     recordingFile: java.io.File?,
     isPlayingRecording: Boolean,
+    activeWordIndex: Int,
     onDismiss: () -> Unit,
     onPlaySentence: () -> Unit,
     onToggleLoop: () -> Unit,
@@ -511,13 +515,17 @@ fun ShadowingSheet(
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
                 if (sentence.words.isNotEmpty()) {
                     FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        sentence.words.forEach { word ->
+                        sentence.words.forEachIndexed { wordIdx, word ->
                             val ipa = when { word.ipa.isNotBlank() -> word.ipa; word.roman.isNotBlank() -> word.roman; else -> word.text }
+                            val isActive = wordIdx == activeWordIndex
                             Column(horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.clickable { onWordClick(word.text, sentence.text) }
                                     .padding(horizontal = 6.dp, vertical = 4.dp)) {
                                 Text(ipa, color = TextMuted, fontSize = 13.sp, lineHeight = 16.sp)
-                                Text(word.text, color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                Text(word.text, color = if (isActive) ActiveGreen else TextPrimary,
+                                    fontSize = if (isActive) 20.sp else 18.sp,
+                                    fontWeight = FontWeight.Bold, maxLines = 1,
+                                    modifier = if (isActive) Modifier.border(1.5.dp, ActiveGreen, RoundedCornerShape(4.dp)).padding(horizontal = 4.dp, vertical = 2.dp) else Modifier)
                             }
                         }
                     }
