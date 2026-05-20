@@ -462,6 +462,17 @@ fun RetranscribeDialog(sentence: com.thai2chinese.data.Sentence, duration: Float
     val totalSec = if (duration > 0) duration else sentence.end.toFloat()
     var startSec by remember { mutableFloatStateOf(sentence.start.toFloat()) }
     var endSec by remember { mutableFloatStateOf(sentence.end.toFloat()) }
+    fun secToInput(sec: Float): String { val m = (sec / 60).toInt(); val s = (sec % 60).toInt(); return "%d:%02d".format(m, s) }
+    fun inputToSec(text: String): Float? {
+        val parts = text.split(":")
+        return when (parts.size) {
+            2 -> { val m = parts[0].toFloatOrNull() ?: return null; val s = parts[1].toFloatOrNull() ?: return null; m * 60 + s }
+            1 -> parts[0].toFloatOrNull()
+            else -> null
+        }
+    }
+    var startInput by remember { mutableStateOf(secToInput(sentence.start)) }
+    var endInput by remember { mutableStateOf(secToInput(sentence.end)) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -472,10 +483,24 @@ fun RetranscribeDialog(sentence: com.thai2chinese.data.Sentence, duration: Float
                 Text(sentence.text, color = AccentBlue, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2)
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text("开始时间: ${formatTime(startSec.toDouble())}", color = TextSecondary, fontSize = 14.sp)
+                // 开始时间
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("开始: ", color = TextSecondary, fontSize = 14.sp)
+                    OutlinedTextField(
+                        value = startInput,
+                        onValueChange = { v ->
+                            startInput = v
+                            inputToSec(v)?.let { if (it in 0f..totalSec && it < endSec - 0.5f) startSec = it }
+                        },
+                        modifier = Modifier.width(80.dp).height(48.dp),
+                        singleLine = true,
+                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = TextPrimary),
+                        colors = appTextFieldColors()
+                    )
+                }
                 Slider(
                     value = startSec,
-                    onValueChange = { if (it < endSec - 0.5f) startSec = it },
+                    onValueChange = { startSec = it; startInput = secToInput(it) },
                     valueRange = 0f..totalSec,
                     modifier = Modifier.fillMaxWidth(),
                     colors = SliderDefaults.colors(thumbColor = AccentBlue, activeTrackColor = AccentBlue, inactiveTrackColor = DarkSurface)
@@ -483,10 +508,24 @@ fun RetranscribeDialog(sentence: com.thai2chinese.data.Sentence, duration: Float
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text("结束时间: ${formatTime(endSec.toDouble())}", color = TextSecondary, fontSize = 14.sp)
+                // 结束时间
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("结束: ", color = TextSecondary, fontSize = 14.sp)
+                    OutlinedTextField(
+                        value = endInput,
+                        onValueChange = { v ->
+                            endInput = v
+                            inputToSec(v)?.let { if (it in 0f..totalSec && it > startSec + 0.5f) endSec = it }
+                        },
+                        modifier = Modifier.width(80.dp).height(48.dp),
+                        singleLine = true,
+                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = TextPrimary),
+                        colors = appTextFieldColors()
+                    )
+                }
                 Slider(
                     value = endSec,
-                    onValueChange = { if (it > startSec + 0.5f) endSec = it },
+                    onValueChange = { endSec = it; endInput = secToInput(it) },
                     valueRange = 0f..totalSec,
                     modifier = Modifier.fillMaxWidth(),
                     colors = SliderDefaults.colors(thumbColor = AccentBlue, activeTrackColor = AccentBlue, inactiveTrackColor = DarkSurface)
