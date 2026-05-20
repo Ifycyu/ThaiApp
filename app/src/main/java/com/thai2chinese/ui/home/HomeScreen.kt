@@ -53,6 +53,10 @@ fun HomeScreen(
     }
     val pickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let {
+            // 持久化读取权限，否则 Service 里读会 Permission Denial
+            try {
+                context.contentResolver.takePersistableUriPermission(it, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (_: Exception) {}
             val filename = context.contentResolver.query(it, null, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
                     val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
