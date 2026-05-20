@@ -78,7 +78,7 @@ fun WordCardContent(detail: WordDetail) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onClick = { scope.launch { TtsPlayer.play(context, detail.word, config.thaiwordUrl) } },
                 colors = ButtonDefaults.buttonColors(containerColor = AccentBlue), shape = RoundedCornerShape(8.dp)) { Text("发音") }
-            OutlinedButton(onClick = { clipboardManager.setText(AnnotatedString("${detail.word} ${detail.meaning}")) }, shape = RoundedCornerShape(8.dp)) {
+            OutlinedButton(onClick = { clipboardManager.setText(AnnotatedString(detail.word)) }, shape = RoundedCornerShape(8.dp)) {
                 Icon(Icons.Default.ContentCopy, null, modifier = Modifier.size(16.dp)); Spacer(modifier = Modifier.width(4.dp)); Text("复制")
             }
         }
