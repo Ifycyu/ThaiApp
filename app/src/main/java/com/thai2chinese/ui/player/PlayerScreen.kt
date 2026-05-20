@@ -71,7 +71,10 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
             override fun onIsPlayingChanged(playing: Boolean) { isPlaying = playing }
         }
         viewModel.player.addListener(listener)
-        onDispose { viewModel.player.removeListener(listener) }
+        onDispose {
+            viewModel.player.removeListener(listener)
+            viewModel.player.pause()
+        }
     }
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -111,8 +114,6 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     // 返回前先隐藏播放器，避免残留
     BackHandler {
         showPlayer = false
-        viewModel.player.clearMediaItems()
-        viewModel.player.stop()
         onBack()
     }
 
@@ -211,6 +212,9 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     }
 
     val currentTask = task!!
+    val hasPendingAnalysis by remember(currentTask) {
+        derivedStateOf { currentTask.sentences.any { it.translation.isBlank() || (it.words.isNotEmpty() && it.words.first().ipa.isBlank()) } }
+    }
 
     if (isLandscape) {
         Column(modifier = Modifier.fillMaxSize().background(DarkBg)) {
@@ -248,7 +252,7 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
                     Text(retranscribeProgress!!, color = AccentBlue, fontSize = 13.sp, modifier = Modifier.padding(end = 8.dp))
                 } else if (batchProgress != null) {
                     Text(batchProgress!!, color = AccentBlue, fontSize = 13.sp, modifier = Modifier.padding(end = 8.dp))
-                } else if (currentTask.sentences.any { it.translation.isBlank() || (it.words.isNotEmpty() && it.words.first().ipa.isBlank()) }) {
+                } else if (hasPendingAnalysis) {
                     TextButton(onClick = { viewModel.enrichAllPending() }) {
                         Text("分析全部", color = AccentBlue, fontSize = 13.sp)
                     }

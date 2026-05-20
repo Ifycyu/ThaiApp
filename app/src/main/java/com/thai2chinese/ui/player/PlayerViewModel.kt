@@ -33,7 +33,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
-    private val store = TaskStore(application)
+    private val store = TaskStore.getInstance(application)
     private val config = AppConfig.getInstance(application)
     private val context = application
     val player: ExoPlayer = ExoPlayer.Builder(application).build()
@@ -100,6 +100,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             player.prepare()
         }
         startSync()
+        // 清理孤立的录音文件（超过1小时的）
+        try {
+            val now = System.currentTimeMillis()
+            context.cacheDir.listFiles()?.forEach { file ->
+                if (file.name.startsWith("shadowing_") && now - file.lastModified() > 3600_000) {
+                    file.delete()
+                }
+            }
+        } catch (_: Exception) {}
     }
 
     private fun startSync() {

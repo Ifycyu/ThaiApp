@@ -45,13 +45,13 @@ class ProcessingService : Service() {
         private fun notifyListeners() { listeners.forEach { it() } }
     }
 
-    override fun onCreate() { super.onCreate(); config = AppConfig.getInstance(this); store = TaskStore(this); createNotificationChannel() }
+    override fun onCreate() { super.onCreate(); config = AppConfig.getInstance(this); store = TaskStore.getInstance(this); createNotificationChannel() }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val videoUri = intent?.getStringExtra(EXTRA_VIDEO_URI) ?: return START_NOT_STICKY
         val filename = intent.getStringExtra(EXTRA_FILENAME) ?: "video.mp4"
         startForeground(NOTIFICATION_ID, buildNotification("准备中..."))
-        isRunning = true; error = null; resultTaskId = null
+        isRunning = true; error = null; resultTaskId = null; progressText = ""; progressPercent = 0f
         scope.launch { processVideo(videoUri, filename) }
         return START_NOT_STICKY
     }

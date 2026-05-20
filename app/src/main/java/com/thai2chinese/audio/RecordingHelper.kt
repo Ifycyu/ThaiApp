@@ -3,6 +3,7 @@ package com.thai2chinese.audio
 import android.content.Context
 import android.media.MediaRecorder
 import android.os.Build
+import android.util.Log
 import java.io.File
 
 class RecordingHelper(private val context: Context) {
@@ -32,16 +33,16 @@ class RecordingHelper(private val context: Context) {
     fun stopRecording() {
         try {
             recorder?.stop()
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("RecordingHelper", "stop failed", e) }
         try {
             recorder?.release()
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("RecordingHelper", "release failed", e) }
         recorder = null
         isRecording = false
     }
 
     fun cancel() {
-        try { recorder?.release() } catch (_: Exception) {}
+        try { recorder?.release() } catch (e: Exception) { Log.w("RecordingHelper", "cancel release failed", e) }
         recorder = null
         isRecording = false
     }

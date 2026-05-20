@@ -1,6 +1,7 @@
 package com.thai2chinese.api
 
 import com.google.gson.Gson
+import com.thai2chinese.util.HttpClient
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -17,10 +18,7 @@ data class ThaiWordHeaders(
 
 object ThaiWordApi {
     private val gson = Gson()
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .build()
+    private val client = HttpClient.instance
 
     fun analyze(sentence: String, baseUrl: String, headers: ThaiWordHeaders): AnalyzeResponse {
         val url = "${baseUrl.trimEnd('/')}/api/v1/analyze".toHttpUrl().newBuilder()

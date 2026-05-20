@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
-    private val store = TaskStore(application)
+    private val store = TaskStore.getInstance(application)
     private val _tasks = MutableStateFlow<List<TaskInfo>>(emptyList())
     val tasks: StateFlow<List<TaskInfo>> = _tasks
     init { refresh() }
