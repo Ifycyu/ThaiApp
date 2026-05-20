@@ -59,7 +59,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private var syncJob: Job? = null
     private val enrichingSentences = ConcurrentHashMap.newKeySet<Int>()
 
-    // 显示模式: 0=IPA, 1=罗马音
+    // 显示模式: 0=罗马音, 1=IPA
     private val _displayMode = MutableStateFlow(0)
     val displayMode: StateFlow<Int> = _displayMode
     fun toggleDisplayMode() { _displayMode.value = if (_displayMode.value == 0) 1 else 0 }

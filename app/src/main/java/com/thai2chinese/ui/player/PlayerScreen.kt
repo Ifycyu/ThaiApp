@@ -350,8 +350,8 @@ fun PlayerProgressBar(
                 Icon(Icons.Default.Mic, contentDescription = "跟读", tint = TextPrimary, modifier = Modifier.size(22.dp))
             }
             Spacer(modifier = Modifier.weight(1f))
-            TextButton(onClick = onToggleDisplayMode, modifier = Modifier.height(28.dp)) {
-                Text(if (displayMode == 0) "IPA" else "罗马", color = AccentBlue, fontSize = 12.sp)
+            TextButton(onClick = onToggleDisplayMode, modifier = Modifier.height(28.dp), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                Text(if (displayMode == 0) "罗马" else "IPA", color = AccentBlue, fontSize = 12.sp)
             }
             Spacer(modifier = Modifier.weight(1f))
             Text(formatTime(duration / 1000.0), color = TextMuted, fontSize = 13.sp)

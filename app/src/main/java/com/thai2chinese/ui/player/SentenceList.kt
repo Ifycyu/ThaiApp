@@ -63,10 +63,10 @@ fun SentenceItem(sentence: Sentence, isActive: Boolean, activeWord: Int, display
             FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 sentence.words.forEachIndexed { wordIdx, word ->
                     val ipa = when {
-                        displayMode == 0 && word.ipa.isNotBlank() -> word.ipa
-                        displayMode == 1 && word.roman.isNotBlank() -> word.roman
-                        word.ipa.isNotBlank() -> word.ipa
+                        displayMode == 0 && word.roman.isNotBlank() -> word.roman
+                        displayMode == 1 && word.ipa.isNotBlank() -> word.ipa
                         word.roman.isNotBlank() -> word.roman
+                        word.ipa.isNotBlank() -> word.ipa
                         else -> word.text
                     }
                     val isActive = wordIdx == activeWord
