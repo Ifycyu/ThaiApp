@@ -48,8 +48,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val selectedWord: StateFlow<WordDetail?> = _selectedWord
     private val _isLoadingWord = MutableStateFlow(false)
     val isLoadingWord: StateFlow<Boolean> = _isLoadingWord
-    private val _selectedDictResult = MutableStateFlow<DictApiResult?>(null)
-    val selectedDictResult: StateFlow<DictApiResult?> = _selectedDictResult
+    private val _selectedDictResult = MutableStateFlow<List<DictApiResult>?>(null)
+    val selectedDictResult: StateFlow<List<DictApiResult>?> = _selectedDictResult
 
     private val _currentPosition = MutableStateFlow(0f)
     val currentPosition: StateFlow<Float> = _currentPosition
@@ -387,15 +387,55 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             try {
                 val raw = withContext(Dispatchers.IO) { ThaiWordApi.learn(sentence.text, twUrl, headers) }
-                // 解析 JSON 提取 explanation 字段
                 val json = JsonParser.parseString(raw).asJsonObject
-                _learnResult.value = json.get("explanation")?.asString ?: raw
+
+                // 检查是否是异步任务响应
+                val taskId = json.get("task_id")?.asString
+                val status = json.get("status")?.asString
+
+                if (taskId != null && status == "pending") {
+                    // 轮询等待任务完成
+                    val result = withContext(Dispatchers.IO) {
+                        pollLearnTask(taskId, twUrl)
+                    }
+                    _learnResult.value = result
+                } else {
+                    // 同步响应，直接提取 explanation
+                    _learnResult.value = json.get("explanation")?.asString ?: raw
+                }
             } catch (e: Exception) {
                 _learnResult.value = "分析失败: ${e.message}"
             } finally {
                 _isLearning.value = false
             }
         }
+    }
+
+    private fun pollLearnTask(taskId: String, baseUrl: String): String {
+        val maxAttempts = 60
+        for (i in 0 until maxAttempts) {
+            Thread.sleep(if (i < 5) 1000 else 2000)
+            val raw = ThaiWordApi.learnCheckTask(taskId, baseUrl)
+            val json = JsonParser.parseString(raw).asJsonObject
+            val status = json.get("status")?.asString ?: ""
+            when (status) {
+                "completed", "done", "success" -> {
+                    val result = json.get("result")
+                    return when {
+                        result == null || result.isJsonNull -> raw
+                        result.isJsonPrimitive -> result.asString
+                        result.isJsonObject -> result.asJsonObject.get("explanation")?.asString ?: result.toString()
+                        else -> result.toString()
+                    }
+                }
+                "failed", "error" -> {
+                    val error = json.get("error")?.asString ?: "Unknown error"
+                    throw Exception(error)
+                }
+                else -> continue
+            }
+        }
+        throw Exception("任务超时")
     }
 
     fun dismissLearn() { _learnResult.value = null }

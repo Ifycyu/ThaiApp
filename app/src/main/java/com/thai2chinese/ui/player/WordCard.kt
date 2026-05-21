@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WordCardSheet(wordDetail: WordDetail?, dictResult: DictApiResult?, isLoading: Boolean, onDismiss: () -> Unit) {
+fun WordCardSheet(wordDetail: WordDetail?, dictResult: List<DictApiResult>?, isLoading: Boolean, onDismiss: () -> Unit) {
     if (wordDetail != null || isLoading) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = DarkCard, contentColor = TextPrimary, dragHandle = null) {
@@ -39,7 +39,7 @@ fun WordCardSheet(wordDetail: WordDetail?, dictResult: DictApiResult?, isLoading
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     WordCardContent(wordDetail)
                     if (dictResult != null) {
-                        DictApiCardContent(dictResult)
+                        dictResult.forEach { DictApiCardContent(it) }
                     }
                 }
             }
@@ -107,6 +107,9 @@ fun DictApiCardContent(result: DictApiResult) {
             }
         }
 
+        if (result.word.isNotBlank()) {
+            Text(result.word, color = AccentBlue, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+        }
         if (result.explain.isNotBlank()) {
             Text(result.explain, color = TextPrimary, fontSize = 16.sp, modifier = Modifier.padding(bottom = 8.dp))
         }

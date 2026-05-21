@@ -69,7 +69,18 @@ object ThaiWordApi {
         return body
     }
 
-    fun dictApiLookup(word: String, dictApiUrl: String): DictApiResult? {
+    fun learnCheckTask(taskId: String, baseUrl: String): String {
+        val request = Request.Builder()
+            .url("${baseUrl.trimEnd('/')}/api/learn/$taskId")
+            .get()
+            .build()
+        val response = client.newCall(request).execute()
+        val body = response.body?.string() ?: throw Exception("Empty response")
+        if (!response.isSuccessful) throw Exception("Task check error ${response.code}: $body")
+        return body
+    }
+
+    fun dictApiLookup(word: String, dictApiUrl: String): List<DictApiResult>? {
         if (dictApiUrl.isBlank()) return null
         try {
             val body = okhttp3.FormBody.Builder().add("str", word).build()
@@ -81,19 +92,23 @@ object ThaiWordApi {
             val entry = json["1"] as? Map<*, *> ?: return null
             val list = entry["list"] as? List<*> ?: return null
             if (list.isEmpty()) return null
-            val item = list[0] as? Map<*, *> ?: return null
-            return DictApiResult(
-                explain = item["explain"]?.toString() ?: "",
-                pronu = item["pronu"]?.toString() ?: "",
-                fyfx = item["fyfx"]?.toString() ?: "",
-                thesaurus = item["thesaurus"]?.toString() ?: "",
-                examp = (item["examp"] as? List<*>)?.mapNotNull { it?.toString() } ?: emptyList()
-            )
+            return list.mapNotNull { raw ->
+                val item = raw as? Map<*, *> ?: return@mapNotNull null
+                DictApiResult(
+                    word = item["word"]?.toString() ?: "",
+                    explain = item["explain"]?.toString() ?: "",
+                    pronu = item["pronu"]?.toString() ?: "",
+                    fyfx = item["fyfx"]?.toString() ?: "",
+                    thesaurus = item["thesaurus"]?.toString() ?: "",
+                    examp = (item["examp"] as? List<*>)?.mapNotNull { it?.toString() } ?: emptyList()
+                )
+            }.ifEmpty { null }
         } catch (e: Exception) { e.printStackTrace(); return null }
     }
 }
 
 data class DictApiResult(
+    val word: String = "",
     val explain: String = "",
     val pronu: String = "",
     val fyfx: String = "",
