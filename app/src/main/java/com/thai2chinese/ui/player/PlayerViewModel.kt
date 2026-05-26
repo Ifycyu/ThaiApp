@@ -283,6 +283,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun startRecording() {
+        player.pause()
+        loopJob?.cancel()
+        _isLooping.value = false
         val file = java.io.File(context.cacheDir, "shadowing_${System.currentTimeMillis()}.m4a")
         _recordingFile.value = file
         recordingHelper.startRecording(file)
@@ -297,6 +300,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun playRecording() {
         val file = _recordingFile.value ?: return
         if (!file.exists()) return
+        player.pause()
+        loopJob?.cancel()
+        _isLooping.value = false
         stopRecordingPlayback()
         recordingPlayer = android.media.MediaPlayer().apply {
             setDataSource(file.absolutePath)
