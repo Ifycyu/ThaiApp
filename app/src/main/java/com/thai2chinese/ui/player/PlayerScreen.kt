@@ -199,6 +199,7 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
             recordingFile = recordingFile,
             isPlayingRecording = isPlayingRecording,
             activeWordIndex = shadowingWordIndex,
+            displayMode = displayMode,
             onDismiss = { showShadowingSheet = false; viewModel.stopShadowing() },
             onPlaySentence = { viewModel.playSentenceOnce() },
             onToggleLoop = { viewModel.toggleLoop() },
@@ -550,6 +551,7 @@ fun ShadowingSheet(
     recordingFile: java.io.File?,
     isPlayingRecording: Boolean,
     activeWordIndex: Int,
+    displayMode: Int = 0,
     onDismiss: () -> Unit,
     onPlaySentence: () -> Unit,
     onToggleLoop: () -> Unit,
@@ -568,7 +570,13 @@ fun ShadowingSheet(
                 if (sentence.words.isNotEmpty()) {
                     FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         sentence.words.forEachIndexed { wordIdx, word ->
-                            val ipa = when { word.ipa.isNotBlank() -> word.ipa; word.roman.isNotBlank() -> word.roman; else -> word.text }
+                            val ipa = when {
+                                displayMode == 0 && word.roman.isNotBlank() -> word.roman
+                                displayMode == 1 && word.ipa.isNotBlank() -> word.ipa
+                                word.roman.isNotBlank() -> word.roman
+                                word.ipa.isNotBlank() -> word.ipa
+                                else -> word.text
+                            }
                             val isActive = wordIdx == activeWordIndex
                             Column(horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.clickable { onWordClick(word.text, sentence.text) }

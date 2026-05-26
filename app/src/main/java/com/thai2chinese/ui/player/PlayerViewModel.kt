@@ -207,8 +207,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun startShadowing(sentence: Sentence) {
         player.pause()
         _shadowingSentence.value = sentence
-        _isLooping.value = true
-        startLoop(sentence)
+        _isLooping.value = false
     }
 
     fun stopShadowing() {
