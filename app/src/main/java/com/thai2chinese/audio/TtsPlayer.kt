@@ -13,6 +13,7 @@ import java.security.MessageDigest
 
 object TtsPlayer {
     private var mediaPlayer: MediaPlayer? = null
+    @Volatile private var playGeneration = 0
     private val client = HttpClient.instance
 
     private fun getCacheFile(context: Context, word: String): File {
@@ -35,8 +36,9 @@ object TtsPlayer {
                         return@withContext
                     }
                 }
+                val gen = ++playGeneration
                 withContext(Dispatchers.Main) {
-                    stop()
+                    stopInternal()
                     if (cacheFile.exists()) {
                         try {
                             mediaPlayer = MediaPlayer().apply {
@@ -46,8 +48,13 @@ object TtsPlayer {
                                         .setUsage(AudioAttributes.USAGE_MEDIA).build()
                                 )
                                 setDataSource(cacheFile.absolutePath)
-                                setOnPreparedListener { it.start() }
-                                setOnCompletionListener { it.release(); mediaPlayer = null }
+                                setOnPreparedListener {
+                                    if (gen == playGeneration) it.start() else it.release()
+                                }
+                                setOnCompletionListener {
+                                    if (gen == playGeneration) { it.release(); mediaPlayer = null }
+                                    else it.release()
+                                }
                                 prepareAsync()
                             }
                         } catch (e: Exception) { Log.w("TtsPlayer", "play failed", e) }
@@ -57,11 +64,19 @@ object TtsPlayer {
         } catch (e: Exception) { Log.w("TtsPlayer", "play error", e) }
     }
 
-    fun stop() {
+    private fun stopInternal() {
         try {
-            mediaPlayer?.let { if (it.isPlaying) it.stop(); it.release() }
+            mediaPlayer?.let { mp ->
+                try { if (mp.isPlaying) mp.stop() } catch (_: Exception) {}
+                mp.release()
+            }
         } catch (e: Exception) { Log.w("TtsPlayer", "stop error", e) }
         mediaPlayer = null
+    }
+
+    fun stop() {
+        playGeneration++
+        stopInternal()
     }
 
     fun release() {

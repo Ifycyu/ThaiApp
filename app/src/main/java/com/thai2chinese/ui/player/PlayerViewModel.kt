@@ -400,9 +400,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
                 if (taskId != null && status == "pending") {
                     // 轮询等待任务完成
-                    val result = withContext(Dispatchers.IO) {
-                        pollLearnTask(taskId, twUrl)
-                    }
+                    val result = pollLearnTask(taskId, twUrl)
                     _learnResult.value = result
                 } else {
                     // 同步响应，直接提取 explanation
@@ -416,11 +414,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    private fun pollLearnTask(taskId: String, baseUrl: String): String {
+    private suspend fun pollLearnTask(taskId: String, baseUrl: String): String {
         val maxAttempts = 60
         for (i in 0 until maxAttempts) {
-            Thread.sleep(if (i < 5) 1000 else 2000)
-            val raw = ThaiWordApi.learnCheckTask(taskId, baseUrl)
+            delay(if (i < 5) 1000L else 2000L)
+            val raw = withContext(Dispatchers.IO) { ThaiWordApi.learnCheckTask(taskId, baseUrl) }
             val json = JsonParser.parseString(raw).asJsonObject
             val status = json.get("status")?.asString ?: ""
             when (status) {

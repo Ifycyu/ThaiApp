@@ -5,9 +5,9 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.ui.graphics.Color
 
 // 背景
-val DarkBg = Color(0xFFF8FAEF)
-val DarkSurface = Color(0xFFD8DBCF)
-val DarkCard = Color(0xFFE8EBDF)
+val BgMain = Color(0xFFF8FAEF)
+val SurfaceMain = Color(0xFFD8DBCF)
+val CardMain = Color(0xFFE8EBDF)
 
 // 强调色
 val AccentBlue = Color(0xFF3B7DD8)
@@ -36,6 +36,6 @@ fun toneColor(toneNumber: Int): Color = when (toneNumber) {
 @Composable
 fun appTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary,
-    focusedBorderColor = AccentBlue, unfocusedBorderColor = DarkCard,
-    cursorColor = AccentBlue, focusedContainerColor = DarkCard, unfocusedContainerColor = DarkCard
+    focusedBorderColor = AccentBlue, unfocusedBorderColor = CardMain,
+    cursorColor = AccentBlue, focusedContainerColor = CardMain, unfocusedContainerColor = CardMain
 )

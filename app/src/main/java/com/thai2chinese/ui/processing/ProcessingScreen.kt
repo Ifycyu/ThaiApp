@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thai2chinese.ProcessingService
+import com.thai2chinese.ProcessingState
 import com.thai2chinese.ui.theme.*
 
 @Composable
@@ -55,7 +56,7 @@ fun ProcessingScreen(
     }
 
     LaunchedEffect(Unit) {
-        if (!ProcessingService.isRunning && ProcessingService.resultTaskId == null) {
+        if (!ProcessingState.isRunning.value && ProcessingState.resultTaskId.value == null) {
             if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             } else {
@@ -76,7 +77,7 @@ fun ProcessingScreen(
         taskId?.let { onNavigateToPlayer(it) }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(DarkBg).padding(16.dp)) {
+    Column(modifier = Modifier.fillMaxSize().background(BgMain).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = TextPrimary) }
             Text("正在处理...", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -85,7 +86,7 @@ fun ProcessingScreen(
         Spacer(modifier = Modifier.height(48.dp))
 
         if (error != null) {
-            Card(colors = CardDefaults.cardColors(containerColor = DarkCard), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+            Card(colors = CardDefaults.cardColors(containerColor = CardMain), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text("处理失败", color = ToneLow, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
@@ -95,13 +96,13 @@ fun ProcessingScreen(
                 }
             }
         } else {
-            Card(colors = CardDefaults.cardColors(containerColor = DarkCard), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+            Card(colors = CardDefaults.cardColors(containerColor = CardMain), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     StepItem("提取音频", when { step > 0 -> StepState.DONE; step == 0 -> StepState.ACTIVE; else -> StepState.PENDING })
                     StepItem("Whisper 转写", when { step > 1 -> StepState.DONE; step == 1 -> StepState.ACTIVE; else -> StepState.PENDING })
                     StepItem("分词分析", when { step > 2 -> StepState.DONE; step == 2 -> StepState.ACTIVE; else -> StepState.PENDING })
                     Spacer(modifier = Modifier.height(20.dp))
-                    LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), color = AccentBlue, trackColor = DarkSurface)
+                    LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), color = AccentBlue, trackColor = SurfaceMain)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(statusText, color = TextSecondary, fontSize = 14.sp)
                 }
@@ -110,7 +111,7 @@ fun ProcessingScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // 可以先去看视频，不用等处理完
-            if (step >= 1 && ProcessingService.resultTaskId == null) {
+            if (step >= 1 && ProcessingState.resultTaskId.value == null) {
                 Text("处理在后台继续，你可以返回", color = TextMuted, fontSize = 13.sp)
             }
         }

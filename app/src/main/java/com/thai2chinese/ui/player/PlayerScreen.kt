@@ -159,7 +159,7 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     // 编辑对话框
     // 删除确认
     if (showDeleteConfirm) {
-        AlertDialog(onDismissRequest = { showDeleteConfirm = false }, containerColor = DarkCard,
+        AlertDialog(onDismissRequest = { showDeleteConfirm = false }, containerColor = CardMain,
             title = { Text("删除句子", color = TextPrimary) },
             text = { Text("确定删除这句字幕吗？", color = TextSecondary) },
             confirmButton = { TextButton(onClick = { viewModel.deleteSentence(); showDeleteConfirm = false }) { Text("删除", color = ToneLow) } },
@@ -212,7 +212,7 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     }
 
     if (task == null) {
-        Box(modifier = Modifier.fillMaxSize().background(DarkBg), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = AccentBlue) }
+        Box(modifier = Modifier.fillMaxSize().background(BgMain), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = AccentBlue) }
         return
     }
 
@@ -222,14 +222,14 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
     }
 
     if (isLandscape) {
-        Column(modifier = Modifier.fillMaxSize().background(DarkBg)) {
+        Column(modifier = Modifier.fillMaxSize().background(BgMain)) {
             Row(modifier = Modifier.weight(1f)) {
                 Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                     androidx.compose.animation.AnimatedVisibility(visible = showPlayer, exit = fadeOut()) {
                         VideoPlayerView(viewModel.player, Modifier.fillMaxSize())
                     }
                 }
-                Column(modifier = Modifier.weight(1f).fillMaxHeight().background(DarkSurface)) {
+                Column(modifier = Modifier.weight(1f).fillMaxHeight().background(SurfaceMain)) {
                     SentenceList(currentTask.sentences, activeSentence, activeWord,
                         displayMode = displayMode,
                         onWordClick = { w, c -> viewModel.onWordClick(w, c) },
@@ -252,7 +252,7 @@ fun PlayerScreen(taskId: String, onBack: () -> Unit, viewModel: PlayerViewModel 
                 onToggleDisplayMode = { viewModel.toggleDisplayMode() })
         }
     } else {
-        Column(modifier = Modifier.fillMaxSize().background(DarkBg)) {
+        Column(modifier = Modifier.fillMaxSize().background(BgMain)) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
                 IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = TextPrimary) }
                 Text(currentTask.filename, color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, modifier = Modifier.weight(1f))
@@ -322,7 +322,7 @@ fun PlayerProgressBar(
         .padding(start = 4.dp, end = 4.dp, bottom = 4.dp)
         .shadow(4.dp, RoundedCornerShape(12.dp))
         .clip(RoundedCornerShape(12.dp))
-        .background(DarkCard)
+        .background(CardMain)
         .padding(horizontal = 12.dp, vertical = 8.dp)) {
         Slider(
             value = displayValue,
@@ -333,7 +333,7 @@ fun PlayerProgressBar(
             colors = SliderDefaults.colors(
                 thumbColor = AccentBlue,
                 activeTrackColor = AccentBlue,
-                inactiveTrackColor = DarkSurface
+                inactiveTrackColor = SurfaceMain
             )
         )
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -365,7 +365,7 @@ fun PlayerProgressBar(
 fun LearnSheet(result: String?, isLoading: Boolean, onDismiss: () -> Unit) {
     if (result == null && !isLoading) return
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = DarkCard, contentColor = TextPrimary) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = CardMain, contentColor = TextPrimary) {
         if (isLoading) {
             Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -477,7 +477,7 @@ fun RetranscribeDialog(sentence: com.thai2chinese.data.Sentence, duration: Float
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = DarkCard,
+        containerColor = CardMain,
         title = { Text("重新识别", color = TextPrimary, fontWeight = FontWeight.Bold) },
         text = {
             Column {
@@ -504,7 +504,7 @@ fun RetranscribeDialog(sentence: com.thai2chinese.data.Sentence, duration: Float
                     onValueChange = { startSec = it; startInput = secToInput(it) },
                     valueRange = 0f..totalSec,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = SliderDefaults.colors(thumbColor = AccentBlue, activeTrackColor = AccentBlue, inactiveTrackColor = DarkSurface)
+                    colors = SliderDefaults.colors(thumbColor = AccentBlue, activeTrackColor = AccentBlue, inactiveTrackColor = SurfaceMain)
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -529,7 +529,7 @@ fun RetranscribeDialog(sentence: com.thai2chinese.data.Sentence, duration: Float
                     onValueChange = { endSec = it; endInput = secToInput(it) },
                     valueRange = 0f..totalSec,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = SliderDefaults.colors(thumbColor = AccentBlue, activeTrackColor = AccentBlue, inactiveTrackColor = DarkSurface)
+                    colors = SliderDefaults.colors(thumbColor = AccentBlue, activeTrackColor = AccentBlue, inactiveTrackColor = SurfaceMain)
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -563,7 +563,7 @@ fun ShadowingSheet(
 ) {
     if (sentence == null) return
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = DarkCard, contentColor = TextPrimary) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = CardMain, contentColor = TextPrimary) {
         Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
             // 句子显示
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
@@ -597,7 +597,7 @@ fun ShadowingSheet(
                 }
             }
 
-            HorizontalDivider(color = DarkSurface, modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(color = SurfaceMain, modifier = Modifier.padding(vertical = 8.dp))
 
             // 操作按钮
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {

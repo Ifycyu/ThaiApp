@@ -36,8 +36,14 @@ fun SettingsScreen(onBack: () -> Unit, config: AppConfig) {
     var showToken by remember { mutableStateOf(false) }
     var saved by remember { mutableStateOf(false) }
     var cleanedSize by remember { mutableStateOf<String?>(null) }
+    var urlErrors by remember { mutableStateOf(setOf<String>()) }
 
-    Column(modifier = Modifier.fillMaxSize().background(DarkBg).verticalScroll(rememberScrollState()).padding(16.dp)) {
+    fun isValidUrl(url: String): Boolean {
+        val trimmed = url.trim()
+        return trimmed.startsWith("http://") || trimmed.startsWith("https://")
+    }
+
+    Column(modifier = Modifier.fillMaxSize().background(BgMain).verticalScroll(rememberScrollState()).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = TextPrimary) }
             Text("设置", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -51,13 +57,19 @@ fun SettingsScreen(onBack: () -> Unit, config: AppConfig) {
             trailingIcon = { IconButton(onClick = { showKey = !showKey }) { Icon(if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility, null, tint = TextMuted) } },
             colors = fieldColors(), singleLine = true)
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = whisperUrl, onValueChange = { whisperUrl = it; saved = false }, modifier = Modifier.fillMaxWidth(),
-            label = { Text("API 地址", color = TextSecondary) }, colors = fieldColors(), singleLine = true)
+        OutlinedTextField(value = whisperUrl, onValueChange = { whisperUrl = it; saved = false; urlErrors = urlErrors - "whisper" },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("API 地址", color = TextSecondary) }, colors = fieldColors(), singleLine = true,
+            isError = "whisper" in urlErrors,
+            supportingText = if ("whisper" in urlErrors) {{ Text("请输入有效的 URL", color = ToneLow) }} else null)
 
         Spacer(modifier = Modifier.height(20.dp))
         SectionTitle("ThaiWord 服务")
-        OutlinedTextField(value = thaiwordUrl, onValueChange = { thaiwordUrl = it; saved = false }, modifier = Modifier.fillMaxWidth(),
-            label = { Text("服务地址", color = TextSecondary) }, colors = fieldColors(), singleLine = true)
+        OutlinedTextField(value = thaiwordUrl, onValueChange = { thaiwordUrl = it; saved = false; urlErrors = urlErrors - "thaiword" },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("服务地址", color = TextSecondary) }, colors = fieldColors(), singleLine = true,
+            isError = "thaiword" in urlErrors,
+            supportingText = if ("thaiword" in urlErrors) {{ Text("请输入有效的 URL", color = ToneLow) }} else null)
 
         Spacer(modifier = Modifier.height(20.dp))
         SectionTitle("词典 API（X-Dict-API）")
@@ -67,14 +79,20 @@ fun SettingsScreen(onBack: () -> Unit, config: AppConfig) {
         }
         if (enableExternalDict) {
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(value = dictApiUrl, onValueChange = { dictApiUrl = it; saved = false }, modifier = Modifier.fillMaxWidth(),
-                label = { Text("词典 API 地址", color = TextSecondary) }, colors = fieldColors(), singleLine = true)
+            OutlinedTextField(value = dictApiUrl, onValueChange = { dictApiUrl = it; saved = false; urlErrors = urlErrors - "dict" },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("词典 API 地址", color = TextSecondary) }, colors = fieldColors(), singleLine = true,
+                isError = "dict" in urlErrors,
+                supportingText = if ("dict" in urlErrors) {{ Text("请输入有效的 URL", color = ToneLow) }} else null)
         }
 
         Spacer(modifier = Modifier.height(20.dp))
         SectionTitle("翻译 API")
-        OutlinedTextField(value = translateEndpoint, onValueChange = { translateEndpoint = it; saved = false }, modifier = Modifier.fillMaxWidth(),
-            label = { Text("X-Translate-Endpoint", color = TextSecondary) }, colors = fieldColors(), singleLine = true)
+        OutlinedTextField(value = translateEndpoint, onValueChange = { translateEndpoint = it; saved = false; urlErrors = urlErrors - "translate" },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("X-Translate-Endpoint", color = TextSecondary) }, colors = fieldColors(), singleLine = true,
+            isError = "translate" in urlErrors,
+            supportingText = if ("translate" in urlErrors) {{ Text("请输入有效的 URL", color = ToneLow) }} else null)
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(value = translateToken, onValueChange = { translateToken = it; saved = false }, modifier = Modifier.fillMaxWidth(),
             label = { Text("X-Translate-Token", color = TextSecondary) },
@@ -87,6 +105,17 @@ fun SettingsScreen(onBack: () -> Unit, config: AppConfig) {
 
         Spacer(modifier = Modifier.height(24.dp))
         Button(onClick = {
+            // 校验必填 URL
+            val errors = mutableSetOf<String>()
+            if (!isValidUrl(whisperUrl)) errors += "whisper"
+            if (!isValidUrl(thaiwordUrl)) errors += "thaiword"
+            if (!isValidUrl(translateEndpoint)) errors += "translate"
+            if (enableExternalDict && !isValidUrl(dictApiUrl)) errors += "dict"
+            if (whisperKey.isBlank()) errors += "whisper"
+            if (translateToken.isBlank()) errors += "translate"
+            urlErrors = errors
+            if (errors.isNotEmpty()) { saved = false; return@Button }
+
             config.whisperApiKey = whisperKey.trim(); config.whisperBaseUrl = whisperUrl.trim(); config.thaiwordUrl = thaiwordUrl.trim()
             config.dictApiUrl = dictApiUrl.trim()
             config.enableExternalDict = enableExternalDict; config.translateEndpoint = translateEndpoint.trim()
@@ -134,7 +163,7 @@ fun SettingsScreen(onBack: () -> Unit, config: AppConfig) {
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        Card(colors = CardDefaults.cardColors(containerColor = DarkCard), shape = RoundedCornerShape(8.dp)) {
+        Card(colors = CardDefaults.cardColors(containerColor = CardMain), shape = RoundedCornerShape(8.dp)) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text("说明", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Spacer(modifier = Modifier.height(4.dp))

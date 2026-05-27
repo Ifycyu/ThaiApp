@@ -75,7 +75,7 @@ fun HomeScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(DarkBg).padding(16.dp)) {
+    Column(modifier = Modifier.fillMaxSize().background(BgMain).padding(16.dp)) {
         Row(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("泰语学习", color = AccentBlue, fontSize = 28.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             IconButton(onClick = onNavigateToSettings) {
@@ -84,7 +84,7 @@ fun HomeScreen(
         }
 
         Card(modifier = Modifier.fillMaxWidth().clickable { pickerLauncher.launch(arrayOf("video/*")) },
-            colors = CardDefaults.cardColors(containerColor = DarkCard), shape = RoundedCornerShape(12.dp)) {
+            colors = CardDefaults.cardColors(containerColor = CardMain), shape = RoundedCornerShape(12.dp)) {
             Row(modifier = Modifier.fillMaxWidth().padding(24.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.FolderOpen, null, tint = AccentBlue, modifier = Modifier.size(32.dp))
                 Spacer(modifier = Modifier.width(12.dp))
@@ -102,7 +102,7 @@ fun HomeScreen(
                             onClick = { if (task.status == "completed" || task.status == "processing") onNavigateToPlayer(task.id) },
                             onLongClick = { menuTaskId = task.id }
                         ),
-                        colors = CardDefaults.cardColors(containerColor = DarkCard), shape = RoundedCornerShape(8.dp)) {
+                        colors = CardDefaults.cardColors(containerColor = CardMain), shape = RoundedCornerShape(8.dp)) {
                         Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.PlayArrow, null, tint = if (task.status != "failed") AccentBlue else TextMuted, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(12.dp))
@@ -128,10 +128,10 @@ fun HomeScreen(
     // 长按菜单
     if (menuTaskId != null) {
         val menuTask = tasks.find { it.id == menuTaskId }
-        ModalBottomSheet(onDismissRequest = { menuTaskId = null }, containerColor = DarkCard, contentColor = TextPrimary) {
+        ModalBottomSheet(onDismissRequest = { menuTaskId = null }, containerColor = CardMain, contentColor = TextPrimary) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(menuTask?.filename ?: "", color = AccentBlue, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
-                HorizontalDivider(color = DarkSurface, modifier = Modifier.padding(vertical = 4.dp))
+                HorizontalDivider(color = SurfaceMain, modifier = Modifier.padding(vertical = 4.dp))
                 TextButton(onClick = {
                     renameTaskId = menuTaskId; renameTaskName = menuTask?.filename ?: ""; menuTaskId = null
                 }, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
@@ -149,7 +149,7 @@ fun HomeScreen(
     if (renameTaskId != null) {
         AlertDialog(
             onDismissRequest = { renameTaskId = null },
-            containerColor = DarkCard,
+            containerColor = CardMain,
             title = { Text("重命名", color = TextPrimary) },
             text = {
                 OutlinedTextField(

@@ -19,7 +19,7 @@ import com.thai2chinese.ui.home.HomeScreen
 import com.thai2chinese.ui.player.PlayerScreen
 import com.thai2chinese.ui.processing.ProcessingScreen
 import com.thai2chinese.ui.settings.SettingsScreen
-import com.thai2chinese.ui.theme.DarkBg
+import com.thai2chinese.ui.theme.BgMain
 import java.net.URLDecoder
 import java.net.URLEncoder
 
@@ -30,20 +30,29 @@ class MainActivity : ComponentActivity() {
         setContent {
             val navController = rememberNavController()
             val config = AppConfig.getInstance(this)
-            Scaffold(modifier = Modifier.fillMaxSize().background(DarkBg)) { padding ->
-                NavHost(navController = navController, startDestination = "home",
-                    modifier = Modifier.fillMaxSize().background(DarkBg).padding(padding)) {
+            val startDestination = if (config.isConfigured) "home" else "settings/true"
+            Scaffold(modifier = Modifier.fillMaxSize().background(BgMain)) { padding ->
+                NavHost(navController = navController, startDestination = startDestination,
+                    modifier = Modifier.fillMaxSize().background(BgMain).padding(padding)) {
                     composable("home") {
                         HomeScreen(
                             onNavigateToPlayer = { navController.navigate("player/$it") },
                             onNavigateToProcessing = { uri, name ->
                                 navController.navigate("processing/${URLEncoder.encode(uri, "UTF-8")}/${URLEncoder.encode(name, "UTF-8")}")
                             },
-                            onNavigateToSettings = { navController.navigate("settings") }
+                            onNavigateToSettings = { navController.navigate("settings/false") }
                         )
                     }
-                    composable("settings") {
-                        SettingsScreen(onBack = { navController.popBackStack() }, config = config)
+                    composable("settings/{fromSetup}",
+                        arguments = listOf(navArgument("fromSetup") { type = NavType.BoolType; defaultValue = false })) { entry ->
+                        val fromSetup = entry.arguments?.getBoolean("fromSetup") ?: false
+                        SettingsScreen(
+                            onBack = {
+                                if (fromSetup) navController.navigate("home") { popUpTo(0) { inclusive = true } }
+                                else navController.popBackStack()
+                            },
+                            config = config
+                        )
                     }
                     composable("processing/{videoUri}/{filename}",
                         arguments = listOf(

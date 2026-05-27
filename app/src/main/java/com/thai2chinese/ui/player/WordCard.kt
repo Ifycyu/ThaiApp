@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 fun WordCardSheet(wordDetail: WordDetail?, dictResult: List<DictApiResult>?, isLoading: Boolean, onDismiss: () -> Unit) {
     if (wordDetail != null || isLoading) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = DarkCard, contentColor = TextPrimary, dragHandle = null) {
+        ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = CardMain, contentColor = TextPrimary, dragHandle = null) {
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = AccentBlue)
@@ -90,7 +90,7 @@ fun WordCardContent(detail: WordDetail) {
 fun DictApiCardContent(result: DictApiResult) {
     val clipboardManager = LocalClipboardManager.current
 
-    HorizontalDivider(color = DarkSurface, modifier = Modifier.padding(horizontal = 20.dp))
+    HorizontalDivider(color = SurfaceMain, modifier = Modifier.padding(horizontal = 20.dp))
 
     Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -146,7 +146,7 @@ fun SyllableCard(syllable: Syllable) {
         else -> ""
     }
 
-    Card(colors = CardDefaults.cardColors(containerColor = DarkSurface), shape = RoundedCornerShape(8.dp)) {
+    Card(colors = CardDefaults.cardColors(containerColor = SurfaceMain), shape = RoundedCornerShape(8.dp)) {
         Column(modifier = Modifier.padding(12.dp)) {
             // 音节 + IPA + 声调
             Row(verticalAlignment = Alignment.CenterVertically) {

@@ -54,7 +54,7 @@ fun SentenceItem(sentence: Sentence, isActive: Boolean, activeWord: Int, display
     onWordClick: (String, String) -> Unit, onSentenceClick: () -> Unit, onLongClick: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()
         .clip(RoundedCornerShape(12.dp))
-        .background(if (isActive) DarkCard else Color.Transparent)
+        .background(if (isActive) CardMain else Color.Transparent)
         .combinedClickable(onClick = onSentenceClick, onLongClick = onLongClick)
         .padding(horizontal = 16.dp, vertical = 12.dp)) {
 
@@ -110,7 +110,7 @@ fun SentenceMenuSheet(
     onReAnalyze: () -> Unit
 ) {
     if (sentence == null) return
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = DarkCard, contentColor = TextPrimary) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardMain, contentColor = TextPrimary) {
         Column(modifier = Modifier.padding(bottom = 24.dp)) {
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
                 Text(sentence.text, color = AccentBlue, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -118,7 +118,7 @@ fun SentenceMenuSheet(
                     Text(sentence.translation, color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp))
                 }
             }
-            HorizontalDivider(color = DarkSurface, modifier = Modifier.padding(vertical = 4.dp))
+            HorizontalDivider(color = SurfaceMain, modifier = Modifier.padding(vertical = 4.dp))
             MenuAction("复制泰语") { onCopy() }
             MenuAction("复制双语字幕") { onCopyBilingual() }
             MenuAction("重新翻译") { onRetranslate() }
@@ -144,7 +144,7 @@ fun EditSentenceDialog(sentence: Sentence?, onDismiss: () -> Unit, onSave: (Stri
     var text by remember(sentence) { mutableStateOf(sentence.text) }
     var translation by remember(sentence) { mutableStateOf(sentence.translation) }
 
-    AlertDialog(onDismissRequest = onDismiss, containerColor = DarkCard, title = { Text("编辑字幕", color = TextPrimary) },
+    AlertDialog(onDismissRequest = onDismiss, containerColor = CardMain, title = { Text("编辑字幕", color = TextPrimary) },
         text = {
             Column {
                 OutlinedTextField(value = text, onValueChange = { text = it }, label = { Text("泰语", color = TextSecondary) },

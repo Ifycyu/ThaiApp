@@ -11,22 +11,29 @@ object AudioExtractor {
     fun extractAudio(context: Context, videoUri: String): File {
         cleanupTempFiles(context)
 
-        // 复制视频到临时文件
-        val tempVideo = File(context.cacheDir, "temp_video_${System.currentTimeMillis()}.mp4")
-        try {
-            context.contentResolver.openInputStream(Uri.parse(videoUri))?.use { input ->
-                tempVideo.outputStream().use { output -> input.copyTo(output) }
-            } ?: throw Exception("Cannot open video: $videoUri")
-        } catch (e: Exception) {
-            tempVideo.delete()
-            throw Exception("Failed to read video: ${e.message}")
+        // 如果已经是本地文件，直接使用；否则复制到临时文件
+        val videoPath: String
+        var tempVideo: File? = null
+        if (videoUri.startsWith("file://")) {
+            videoPath = videoUri.removePrefix("file://")
+        } else {
+            tempVideo = File(context.cacheDir, "temp_video_${System.currentTimeMillis()}.mp4")
+            try {
+                context.contentResolver.openInputStream(Uri.parse(videoUri))?.use { input ->
+                    tempVideo.outputStream().use { output -> input.copyTo(output) }
+                } ?: throw Exception("Cannot open video: $videoUri")
+            } catch (e: Exception) {
+                tempVideo.delete()
+                throw Exception("Failed to read video: ${e.message}")
+            }
+            videoPath = tempVideo.absolutePath
         }
 
         val extractor = MediaExtractor()
         try {
-            extractor.setDataSource(tempVideo.absolutePath)
+            extractor.setDataSource(videoPath)
         } catch (e: Exception) {
-            tempVideo.delete()
+            tempVideo?.delete()
             throw Exception("Failed to read video format: ${e.message}")
         }
 
@@ -44,7 +51,7 @@ object AudioExtractor {
         }
         if (audioTrackIndex < 0 || audioFormat == null) {
             extractor.release()
-            tempVideo.delete()
+            tempVideo?.delete()
             throw Exception("No audio track found in video")
         }
 
@@ -74,7 +81,7 @@ object AudioExtractor {
         muxer.stop()
         muxer.release()
         extractor.release()
-        tempVideo.delete()
+        tempVideo?.delete()
 
         // 检查文件大小
         val fileSize = audioFile.length()
@@ -88,19 +95,26 @@ object AudioExtractor {
     }
 
     fun extractAudioRange(context: Context, videoUri: String, startSec: Double, endSec: Double): File {
-        val tempVideo = File(context.cacheDir, "temp_video_${System.currentTimeMillis()}.mp4")
-        try {
-            context.contentResolver.openInputStream(Uri.parse(videoUri))?.use { input ->
-                tempVideo.outputStream().use { output -> input.copyTo(output) }
-            } ?: throw Exception("Cannot open video: $videoUri")
-        } catch (e: Exception) {
-            tempVideo.delete()
-            throw Exception("Failed to read video: ${e.message}")
+        val videoPath: String
+        var tempVideo: File? = null
+        if (videoUri.startsWith("file://")) {
+            videoPath = videoUri.removePrefix("file://")
+        } else {
+            tempVideo = File(context.cacheDir, "temp_video_${System.currentTimeMillis()}.mp4")
+            try {
+                context.contentResolver.openInputStream(Uri.parse(videoUri))?.use { input ->
+                    tempVideo.outputStream().use { output -> input.copyTo(output) }
+                } ?: throw Exception("Cannot open video: $videoUri")
+            } catch (e: Exception) {
+                tempVideo.delete()
+                throw Exception("Failed to read video: ${e.message}")
+            }
+            videoPath = tempVideo.absolutePath
         }
 
         val extractor = MediaExtractor()
-        try { extractor.setDataSource(tempVideo.absolutePath) } catch (e: Exception) {
-            tempVideo.delete(); throw Exception("Failed to read video format: ${e.message}")
+        try { extractor.setDataSource(videoPath) } catch (e: Exception) {
+            tempVideo?.delete(); throw Exception("Failed to read video format: ${e.message}")
         }
 
         var audioTrackIndex = -1; var audioFormat: MediaFormat? = null
@@ -110,7 +124,7 @@ object AudioExtractor {
             if (mime.startsWith("audio/")) { audioTrackIndex = i; audioFormat = format; break }
         }
         if (audioTrackIndex < 0 || audioFormat == null) {
-            extractor.release(); tempVideo.delete(); throw Exception("No audio track found")
+            extractor.release(); tempVideo?.delete(); throw Exception("No audio track found")
         }
 
         val audioFile = File(context.cacheDir, "range_${System.currentTimeMillis()}.m4a")
@@ -140,7 +154,7 @@ object AudioExtractor {
             extractor.advance()
         }
 
-        muxer.stop(); muxer.release(); extractor.release(); tempVideo.delete()
+        muxer.stop(); muxer.release(); extractor.release(); tempVideo?.delete()
         return audioFile
     }
 

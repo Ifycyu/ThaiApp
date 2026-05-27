@@ -14,7 +14,6 @@ import com.thai2chinese.audio.AudioExtractor
 import com.thai2chinese.data.AppConfig
 import com.thai2chinese.data.TaskInfo
 import com.thai2chinese.data.TaskStore
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.async
@@ -32,17 +31,6 @@ class ProcessingService : Service() {
         const val NOTIFICATION_ID = 1
         const val EXTRA_VIDEO_URI = "video_uri"
         const val EXTRA_FILENAME = "filename"
-
-        var progressText: String = ""; private set
-        var progressPercent: Float = 0f; private set
-        var isRunning: Boolean = false; private set
-        var resultTaskId: String? = null; private set
-        var error: String? = null; private set
-
-        private val listeners = CopyOnWriteArrayList<() -> Unit>()
-        fun addListener(l: () -> Unit) { listeners.add(l) }
-        fun removeListener(l: () -> Unit) { listeners.remove(l) }
-        private fun notifyListeners() { listeners.forEach { it() } }
     }
 
     override fun onCreate() { super.onCreate(); config = AppConfig.getInstance(this); store = TaskStore.getInstance(this); createNotificationChannel() }
@@ -51,7 +39,7 @@ class ProcessingService : Service() {
         val videoUri = intent?.getStringExtra(EXTRA_VIDEO_URI) ?: return START_NOT_STICKY
         val filename = intent.getStringExtra(EXTRA_FILENAME) ?: "video.mp4"
         startForeground(NOTIFICATION_ID, buildNotification("准备中..."))
-        isRunning = true; error = null; resultTaskId = null; progressText = ""; progressPercent = 0f
+        ProcessingState.reset()
         scope.launch { processVideo(videoUri, filename) }
         return START_NOT_STICKY
     }
@@ -69,15 +57,12 @@ class ProcessingService : Service() {
 
             val sentences = whisperResult.toSentences()
 
-            // 先保存未 enrichment 的版本，让用户可以先看视频
             val taskId = UUID.randomUUID().toString()
             val preliminaryTask = TaskInfo(id = taskId, filename = filename, status = "processing", sentences = sentences, videoUri = videoUri)
             store.put(preliminaryTask)
-            resultTaskId = taskId
-            notifyListeners()
+            ProcessingState.complete(taskId)
 
-            // 并发处理所有句子（限制并发数为 3，失败重试 2 次）
-            val semaphore = kotlinx.coroutines.sync.Semaphore(3)
+            val semaphore = Semaphore(3)
             val enrichedSentences = coroutineScope {
                 sentences.mapIndexed { idx, sentence ->
                     async(Dispatchers.IO) {
@@ -110,22 +95,22 @@ class ProcessingService : Service() {
             updateProgress("完成", 1f)
 
         } catch (e: Exception) {
-            error = e.message ?: "未知错误"; progressText = "失败: ${error}"; notifyListeners()
+            ProcessingState.fail(e.message ?: "未知错误")
         } finally {
-            isRunning = false; notifyListeners()
+            ProcessingState.stop()
             stopForeground(STOP_FOREGROUND_REMOVE); stopSelf()
         }
     }
 
     private fun updateProgress(text: String, percent: Float) {
-        progressText = text; progressPercent = percent; notifyListeners()
+        ProcessingState.updateProgress(text, percent)
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(NOTIFICATION_ID, buildNotification(text))
     }
 
     private fun buildNotification(text: String): Notification =
         NotificationCompat.Builder(this, CHANNEL_ID).setContentTitle("泰语学习").setContentText(text)
-            .setSmallIcon(android.R.drawable.ic_media_play).setOngoing(true).setProgress(100, (progressPercent * 100).toInt(), false).build()
+            .setSmallIcon(android.R.drawable.ic_media_play).setOngoing(true).setProgress(100, (ProcessingState.progressPercent.value * 100).toInt(), false).build()
 
     private fun createNotificationChannel() {
         val channel = NotificationChannel(CHANNEL_ID, "视频处理", NotificationManager.IMPORTANCE_LOW)
